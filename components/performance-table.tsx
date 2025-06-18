@@ -50,6 +50,8 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
   const [aiLoading, setAiLoading] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<PerformanceEntry | null>(null)
   const [showAiDialog, setShowAiDialog] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [entryToDelete, setEntryToDelete] = useState<PerformanceEntry | null>(null)
 
   useEffect(() => {
     fetchEntries()
@@ -169,9 +171,16 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
     }
   }
 
-  async function handleDeleteEntry(id: number) {
+  function handleDeleteClick(entry: PerformanceEntry) {
+    setEntryToDelete(entry)
+    setDeleteDialogOpen(true)
+  }
+
+  async function handleConfirmDelete() {
+    if (!entryToDelete) return
+
     try {
-      const response = await fetch(`/api/performance/${employeeId}/${id}`, {
+      const response = await fetch(`/api/performance/${employeeId}/${entryToDelete.id}`, {
         method: "DELETE",
       })
 
@@ -179,10 +188,18 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         throw new Error("Failed to delete entry")
       }
 
-      setEntries(entries.filter((entry) => entry.id !== id))
+      setEntries(entries.filter((entry) => entry.id !== entryToDelete.id))
+      setDeleteDialogOpen(false)
+      setEntryToDelete(null)
     } catch (error) {
       console.error("Failed to delete entry:", error)
+      alert("Failed to delete entry. Please try again.")
     }
+  }
+
+  function handleCancelDelete() {
+    setDeleteDialogOpen(false)
+    setEntryToDelete(null)
   }
 
   async function getAiSuggestion(entry: PerformanceEntry) {
@@ -490,7 +507,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                         <Button
                           size="icon"
                           variant="outline"
-                          onClick={() => handleDeleteEntry(entry.id)}
+                          onClick={() => handleDeleteClick(entry)}
                           className="h-8 w-8 text-red-500 hover:text-red-600"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -544,6 +561,49 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Confirm Deletion
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this client interaction? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {entryToDelete && (
+            <div className="py-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="space-y-2">
+                  <p className="text-sm">
+                    <span className="font-medium text-gray-700">Client:</span> {entryToDelete.name}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-medium text-gray-700">Email:</span> {entryToDelete.email}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-medium text-gray-700">Purpose:</span> {entryToDelete.purpose}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-medium text-gray-700">Status:</span> {entryToDelete.status}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={handleCancelDelete}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Entry
             </Button>
           </DialogFooter>
         </DialogContent>
