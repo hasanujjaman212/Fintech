@@ -52,6 +52,8 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
   const [showAiDialog, setShowAiDialog] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [entryToDelete, setEntryToDelete] = useState<PerformanceEntry | null>(null)
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     fetchEntries()
@@ -85,6 +87,54 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
   async function handleSave() {
     if (!editData) return
 
+    // Validate required fields for editing
+    const errors: Record<string, string> = {}
+
+    if (!editData.name?.trim()) {
+      errors.name = "Name is required"
+      alert("Name is required")
+      return
+    }
+
+    if (!editData.email?.trim()) {
+      errors.email = "Email is required"
+      alert("Email is required")
+      return
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editData.email)) {
+      errors.email = "Please enter a valid email address"
+      alert("Please enter a valid email address")
+      return
+    }
+
+    if (!editData.mobile_number?.trim()) {
+      errors.mobile_number = "Mobile number is required"
+      alert("Mobile number is required")
+      return
+    }
+
+    if (!editData.address?.trim()) {
+      errors.address = "Address is required"
+      alert("Address is required")
+      return
+    }
+
+    if (!editData.purpose?.trim()) {
+      errors.purpose = "Purpose is required"
+      alert("Purpose is required")
+      return
+    }
+
+    // Check for duplicate email (excluding current entry)
+    if (editData.email?.trim()) {
+      const existingEntry = entries.find(
+        (entry) => entry.email.toLowerCase() === editData.email?.toLowerCase() && entry.id !== editData.id,
+      )
+      if (existingEntry) {
+        alert("A client with this email already exists")
+        return
+      }
+    }
+
     try {
       const response = await fetch(`/api/performance/${employeeId}/${editData.id}`, {
         method: "PUT",
@@ -92,14 +142,14 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: editData.name,
-          email: editData.email,
-          mobileNumber: editData.mobile_number,
-          address: editData.address,
-          purpose: editData.purpose,
+          name: editData.name.trim(),
+          email: editData.email.trim(),
+          mobileNumber: editData.mobile_number.trim(),
+          address: editData.address.trim(),
+          purpose: editData.purpose.trim(),
           employeeId: editData.employee_id,
           status: editData.status,
-          notes: editData.notes || "",
+          notes: editData.notes?.trim() || "",
         }),
       })
 
@@ -128,6 +178,49 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
   }
 
   async function handleAddEntry() {
+    // Reset validation errors
+    setValidationErrors({})
+
+    // Validate required fields
+    const errors: Record<string, string> = {}
+
+    if (!newEntry.name?.trim()) {
+      errors.name = "Name is required"
+    }
+
+    if (!newEntry.email?.trim()) {
+      errors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEntry.email)) {
+      errors.email = "Please enter a valid email address"
+    }
+
+    if (!newEntry.mobile_number?.trim()) {
+      errors.mobile_number = "Mobile number is required"
+    }
+
+    if (!newEntry.address?.trim()) {
+      errors.address = "Address is required"
+    }
+
+    if (!newEntry.purpose?.trim()) {
+      errors.purpose = "Purpose is required"
+    }
+
+    // Check for duplicate email
+    if (newEntry.email?.trim()) {
+      const existingEntry = entries.find((entry) => entry.email.toLowerCase() === newEntry.email?.toLowerCase())
+      if (existingEntry) {
+        errors.email = "A client with this email already exists"
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors)
+      return
+    }
+
+    setIsSubmitting(true)
+
     try {
       const newSerialNumber = entries.length > 0 ? Math.max(...entries.map((e) => e.serial_number)) + 1 : 1
 
@@ -138,20 +231,21 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         },
         body: JSON.stringify({
           serialNumber: newSerialNumber,
-          name: newEntry.name || "",
-          email: newEntry.email || "",
-          mobileNumber: newEntry.mobile_number || "",
-          address: newEntry.address || "",
-          purpose: newEntry.purpose || "",
+          name: newEntry.name?.trim() || "",
+          email: newEntry.email?.trim() || "",
+          mobileNumber: newEntry.mobile_number?.trim() || "",
+          address: newEntry.address?.trim() || "",
+          purpose: newEntry.purpose?.trim() || "",
           employeeId: employeeId,
           date: new Date().toISOString().split("T")[0],
           status: newEntry.status || "pending",
-          notes: newEntry.notes || "",
+          notes: newEntry.notes?.trim() || "",
         }),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to add entry")
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to add entry")
       }
 
       const entry = await response.json()
@@ -165,9 +259,13 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         status: "pending",
         notes: "",
       })
+      setValidationErrors({})
       setIsAddDialogOpen(false)
     } catch (error) {
       console.error("Failed to add entry:", error)
+      setValidationErrors({ general: "Failed to add client. Please try again." })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -286,70 +384,98 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
               <DialogDescription>Enter the details of the new client interaction.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {validationErrors.general && (
+                <div className="col-span-4 bg-red-50 text-red-600 p-3 rounded-md text-sm">
+                  {validationErrors.general}
+                </div>
+              )}
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="name" className="text-right">
-                  Name
+                  Name <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="name"
-                  value={newEntry.name || ""}
-                  onChange={(e) => handleNewEntryChange("name", e.target.value)}
-                  className="col-span-3"
-                  placeholder="Client full name"
-                />
+                <div className="col-span-3">
+                  <Input
+                    id="name"
+                    value={newEntry.name || ""}
+                    onChange={(e) => handleNewEntryChange("name", e.target.value)}
+                    placeholder="Client full name"
+                    className={validationErrors.name ? "border-red-500" : ""}
+                  />
+                  {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>}
+                </div>
               </div>
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="email" className="text-right">
-                  Email
+                  Email <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newEntry.email || ""}
-                  onChange={(e) => handleNewEntryChange("email", e.target.value)}
-                  className="col-span-3"
-                  placeholder="client@example.com"
-                />
+                <div className="col-span-3">
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newEntry.email || ""}
+                    onChange={(e) => handleNewEntryChange("email", e.target.value)}
+                    placeholder="client@example.com"
+                    className={validationErrors.email ? "border-red-500" : ""}
+                  />
+                  {validationErrors.email && <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>}
+                </div>
               </div>
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="mobile_number" className="text-right">
-                  Mobile
+                  Mobile <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="mobile_number"
-                  value={newEntry.mobile_number || ""}
-                  onChange={(e) => handleNewEntryChange("mobile_number", e.target.value)}
-                  className="col-span-3"
-                  placeholder="+1-555-0123"
-                />
+                <div className="col-span-3">
+                  <Input
+                    id="mobile_number"
+                    value={newEntry.mobile_number || ""}
+                    onChange={(e) => handleNewEntryChange("mobile_number", e.target.value)}
+                    placeholder="+1-555-0123"
+                    className={validationErrors.mobile_number ? "border-red-500" : ""}
+                  />
+                  {validationErrors.mobile_number && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.mobile_number}</p>
+                  )}
+                </div>
               </div>
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="address" className="text-right">
-                  Address
+                  Address <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="address"
-                  value={newEntry.address || ""}
-                  onChange={(e) => handleNewEntryChange("address", e.target.value)}
-                  className="col-span-3"
-                  placeholder="Client address"
-                />
+                <div className="col-span-3">
+                  <Input
+                    id="address"
+                    value={newEntry.address || ""}
+                    onChange={(e) => handleNewEntryChange("address", e.target.value)}
+                    placeholder="Client address"
+                    className={validationErrors.address ? "border-red-500" : ""}
+                  />
+                  {validationErrors.address && <p className="text-red-500 text-xs mt-1">{validationErrors.address}</p>}
+                </div>
               </div>
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="purpose" className="text-right">
-                  Purpose
+                  Purpose <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="purpose"
-                  value={newEntry.purpose || ""}
-                  onChange={(e) => handleNewEntryChange("purpose", e.target.value)}
-                  className="col-span-3"
-                  placeholder="Loan application, Investment consultation, etc."
-                />
+                <div className="col-span-3">
+                  <Input
+                    id="purpose"
+                    value={newEntry.purpose || ""}
+                    onChange={(e) => handleNewEntryChange("purpose", e.target.value)}
+                    placeholder="Loan application, Investment consultation, etc."
+                    className={validationErrors.purpose ? "border-red-500" : ""}
+                  />
+                  {validationErrors.purpose && <p className="text-red-500 text-xs mt-1">{validationErrors.purpose}</p>}
+                </div>
               </div>
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="status" className="text-right">
-                  Status
+                  Status <span className="text-red-500">*</span>
                 </Label>
                 <select
                   id="status"
@@ -362,6 +488,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                   <option value="completed">Completed</option>
                 </select>
               </div>
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="notes" className="text-right">
                   Notes
@@ -371,20 +498,28 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                   value={newEntry.notes || ""}
                   onChange={(e) => handleNewEntryChange("notes", e.target.value)}
                   className="col-span-3"
-                  placeholder="Additional notes..."
+                  placeholder="Additional notes (optional)..."
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button
                 type="button"
                 onClick={handleAddEntry}
+                disabled={isSubmitting}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
               >
-                Add Client
+                {isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Adding...</span>
+                  </div>
+                ) : (
+                  "Add Client"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
