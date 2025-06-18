@@ -50,6 +50,8 @@ export default function EmployeeLogin() {
         const employeeData = JSON.stringify({
           id: data.user.id,
           name: data.user.name,
+          email: data.user.email,
+          mobileNumber: data.user.mobileNumber,
           role: data.user.role,
           department: data.user.department,
         })
@@ -91,20 +93,20 @@ export default function EmployeeLogin() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <Card className="border-gray-200 shadow-lg backdrop-blur-sm bg-white/80">
               <CardHeader className="space-y-1">
-                <CardTitle className="text-2xl font-bold text-center">Employee Login</CardTitle>
+                <CardTitle className="text-2xl font-bold text-center">Admin Login</CardTitle>
                 <CardDescription className="text-center">
-                  Enter your credentials to access the employee dashboard
+                  Enter your admin credentials to access the dashboard
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleSubmit}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="employeeId">Employee ID</Label>
+                    <Label htmlFor="employeeId">Admin ID</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <Input
                         id="employeeId"
-                        placeholder="Enter your employee ID"
+                        placeholder="Enter your admin ID"
                         value={employeeId}
                         onChange={(e) => setEmployeeId(e.target.value)}
                         className="pl-10"
@@ -144,18 +146,14 @@ export default function EmployeeLogin() {
                     </div>
                   )}
 
-                  <div className="text-sm text-gray-500">
-                    <p>Demo credentials:</p>
-                    <ul className="list-disc pl-5 mt-1 space-y-1">
-                      <li>
-                        ID: <span className="font-mono">EMP001</span>, Password:{" "}
-                        <span className="font-mono">password123</span> (Admin access)
-                      </li>
-                      <li>
-                        ID: <span className="font-mono">EMP002</span>, Password:{" "}
-                        <span className="font-mono">password123</span> (Limited access)
-                      </li>
-                    </ul>
+                  <div className="text-sm text-gray-500 bg-blue-50 p-3 rounded-md">
+                    <p className="font-medium text-blue-800 mb-1">Admin Credentials:</p>
+                    <p>
+                      ID: <span className="font-mono font-medium">Admin</span>
+                    </p>
+                    <p>
+                      Password: <span className="font-mono font-medium">password123</span>
+                    </p>
                   </div>
                 </CardContent>
                 <CardFooter>
@@ -182,7 +180,7 @@ export default function EmployeeLogin() {
           </motion.div>
 
           <p className="text-center text-gray-500 text-sm mt-4">
-            Forgot your credentials? Contact your administrator for assistance.
+            Need help? Contact system administrator for assistance.
           </p>
         </div>
       </main>

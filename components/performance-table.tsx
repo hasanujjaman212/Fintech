@@ -22,6 +22,7 @@ interface PerformanceEntry {
   serial_number: number
   name: string
   email: string
+  mobile_number: string
   address: string
   purpose: string
   employee_id: string
@@ -39,9 +40,11 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
   const [newEntry, setNewEntry] = useState<Partial<PerformanceEntry>>({
     name: "",
     email: "",
+    mobile_number: "",
     address: "",
     purpose: "",
     status: "pending",
+    notes: "",
   })
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
@@ -87,14 +90,20 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...editData,
-          serialNumber: editData.serial_number,
+          name: editData.name,
+          email: editData.email,
+          mobileNumber: editData.mobile_number,
+          address: editData.address,
+          purpose: editData.purpose,
           employeeId: editData.employee_id,
+          status: editData.status,
+          notes: editData.notes || "",
         }),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to update entry")
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to update entry")
       }
 
       const updated = await response.json()
@@ -103,6 +112,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
       setEditData(null)
     } catch (error) {
       console.error("Failed to update entry:", error)
+      alert("Failed to update entry. Please try again.")
     }
   }
 
@@ -128,6 +138,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           serialNumber: newSerialNumber,
           name: newEntry.name || "",
           email: newEntry.email || "",
+          mobileNumber: newEntry.mobile_number || "",
           address: newEntry.address || "",
           purpose: newEntry.purpose || "",
           employeeId: employeeId,
@@ -146,9 +157,11 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
       setNewEntry({
         name: "",
         email: "",
+        mobile_number: "",
         address: "",
         purpose: "",
         status: "pending",
+        notes: "",
       })
       setIsAddDialogOpen(false)
     } catch (error) {
@@ -185,6 +198,8 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         Analyze the following client interaction and provide personalized recommendations for the employee handling this case:
         
         Client Name: ${entry.name}
+        Email: ${entry.email}
+        Mobile: ${entry.mobile_number}
         Purpose: ${entry.purpose}
         Status: ${entry.status}
         Notes: ${entry.notes || "No notes provided"}
@@ -245,10 +260,10 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-              <Plus className="h-4 w-4 mr-2" /> Add New
+              <Plus className="h-4 w-4 mr-2" /> Add New Client
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Add New Client Interaction</DialogTitle>
               <DialogDescription>Enter the details of the new client interaction.</DialogDescription>
@@ -263,6 +278,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                   value={newEntry.name || ""}
                   onChange={(e) => handleNewEntryChange("name", e.target.value)}
                   className="col-span-3"
+                  placeholder="Client full name"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -275,6 +291,19 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                   value={newEntry.email || ""}
                   onChange={(e) => handleNewEntryChange("email", e.target.value)}
                   className="col-span-3"
+                  placeholder="client@example.com"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="mobile_number" className="text-right">
+                  Mobile
+                </Label>
+                <Input
+                  id="mobile_number"
+                  value={newEntry.mobile_number || ""}
+                  onChange={(e) => handleNewEntryChange("mobile_number", e.target.value)}
+                  className="col-span-3"
+                  placeholder="+1-555-0123"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -286,6 +315,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                   value={newEntry.address || ""}
                   onChange={(e) => handleNewEntryChange("address", e.target.value)}
                   className="col-span-3"
+                  placeholder="Client address"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -297,6 +327,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                   value={newEntry.purpose || ""}
                   onChange={(e) => handleNewEntryChange("purpose", e.target.value)}
                   className="col-span-3"
+                  placeholder="Loan application, Investment consultation, etc."
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -323,6 +354,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                   value={newEntry.notes || ""}
                   onChange={(e) => handleNewEntryChange("notes", e.target.value)}
                   className="col-span-3"
+                  placeholder="Additional notes..."
                 />
               </div>
             </div>
@@ -335,7 +367,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                 onClick={handleAddEntry}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
               >
-                Add Entry
+                Add Client
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -349,7 +381,8 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
               <TableHead className="w-[60px]">S.No</TableHead>
               <TableHead>Name</TableHead>
               <TableHead className="hidden md:table-cell">Email</TableHead>
-              <TableHead className="hidden lg:table-cell">Address</TableHead>
+              <TableHead className="hidden lg:table-cell">Mobile</TableHead>
+              <TableHead className="hidden xl:table-cell">Address</TableHead>
               <TableHead>Purpose</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-[140px] text-right">Actions</TableHead>
@@ -383,6 +416,17 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                     )}
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
+                    {editingId === entry.id ? (
+                      <Input
+                        value={editData?.mobile_number || ""}
+                        onChange={(e) => handleChange("mobile_number", e.target.value)}
+                        className="h-9"
+                      />
+                    ) : (
+                      entry.mobile_number
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell">
                     {editingId === entry.id ? (
                       <Input
                         value={editData?.address || ""}
@@ -458,8 +502,8 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                  No performance data available. Add your first client interaction.
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                  No client interactions available. Add your first client interaction above.
                 </TableCell>
               </TableRow>
             )}

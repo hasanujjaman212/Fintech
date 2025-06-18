@@ -4,6 +4,7 @@ export interface PerformanceEntry {
   serialNumber: number
   name: string
   email: string
+  mobileNumber: string
   address: string
   purpose: string
   employeeId: string
@@ -23,23 +24,45 @@ export interface FinancialInsight {
   category: string
 }
 
-
-
-
-
-// Mock function to get employee performance data
-export async function getEmployeePerformance(employeeId: string): Promise<PerformanceEntry[]> {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-  return mockPerformanceData[employeeId] || []
-}
-
-// Mock function to update a performance entry
-export async function updatePerformanceEntry(entry: PerformanceEntry): Promise<PerformanceEntry> {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  return entry
-}
+// Mock financial insights data
+const mockFinancialInsights: FinancialInsight[] = [
+  {
+    id: "fi1",
+    title: "Revenue Growth",
+    description: "15% increase from last quarter",
+    impact: "positive",
+    value: 15,
+    trend: "up",
+    category: "revenue",
+  },
+  {
+    id: "fi2",
+    title: "New Clients",
+    description: "12 new clients this month",
+    impact: "positive",
+    value: 12,
+    trend: "up",
+    category: "clients",
+  },
+  {
+    id: "fi3",
+    title: "Processing Time",
+    description: "Decreased by 8% this month",
+    impact: "positive",
+    value: 8,
+    trend: "down",
+    category: "efficiency",
+  },
+  {
+    id: "fi4",
+    title: "Market Volatility",
+    description: "Increased market uncertainty",
+    impact: "negative",
+    value: 5,
+    trend: "up",
+    category: "risk",
+  },
+]
 
 // Mock function to get financial insights
 export async function getFinancialInsights(): Promise<FinancialInsight[]> {
@@ -53,39 +76,41 @@ export async function getEmployeeReport(employeeId: string): Promise<any> {
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 1200))
 
-  // Mock employee report data
+  // Mock employee report data for Admin
   return {
     personalInfo: {
-      name: employeeId === "EMP001" ? "Employee1" : "Employee2",
-      position: employeeId === "EMP001" ? "" : "",
-      department: "",
-      joinDate: "",
-      email: employeeId === "EMP001" ? "" : "",
-      phone: employeeId === "EMP001" ? "" : "",
+      name: "Administrator",
+      position: "System Administrator",
+      department: "Management",
+      joinDate: "2020-01-01",
+      email: "admin@fintechsolutions.com",
+      phone: "+1-555-0001",
+      mobileNumber: "+1-555-0001",
     },
     performance: {
-      clientSatisfaction: employeeId === "EMP001" ? 92 : 88,
-      taskCompletion: employeeId === "EMP001" ? 95 : 90,
-      responseTime: employeeId === "EMP001" ? 97 : 85,
-      qualityScore: employeeId === "EMP001" ? 94 : 89,
+      clientSatisfaction: 98,
+      taskCompletion: 100,
+      responseTime: 95,
+      qualityScore: 97,
     },
-
+    achievements: [
+      "System setup and configuration completed",
+      "Database optimization implemented",
+      "Security protocols established",
+      "AI integration successfully deployed",
+    ],
     recentActivity: [
       {
-        date: "2023-05-15",
-        action:
-          employeeId === "EMP001"
-            ? ""
-            : "",
+        date: "2023-12-15",
+        action: "Database schema updated with mobile number field",
       },
       {
-        date: "2023-05-12",
-        action: employeeId === "EMP001" ? "" : "",
+        date: "2023-12-14",
+        action: "Performance monitoring system enhanced",
       },
       {
-        date: "2023-05-10",
-        action:
-          employeeId === "EMP001" ? "" : "",
+        date: "2023-12-13",
+        action: "AI assistant capabilities expanded",
       },
     ],
   }
