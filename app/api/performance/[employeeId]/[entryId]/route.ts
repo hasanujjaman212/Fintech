@@ -26,6 +26,7 @@ export async function PUT(request: NextRequest, { params }: { params: { employee
         date: string
         status: string
         notes: string
+        image_url: string
       }[]
     >`
       UPDATE performance_entries 
@@ -37,9 +38,10 @@ export async function PUT(request: NextRequest, { params }: { params: { employee
         purpose = ${entry.purpose || ""},
         status = ${entry.status || "pending"},
         notes = ${entry.notes || ""},
+        image_url = ${entry.imageUrl || ""},
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ${entryId} AND employee_id = ${employeeId}
-      RETURNING id, serial_number, name, email, mobile_number, address, purpose, employee_id, date, status, notes
+      RETURNING id, serial_number, name, email, mobile_number, address, purpose, employee_id, date, status, notes, image_url
     `
 
     if (result.length === 0) {

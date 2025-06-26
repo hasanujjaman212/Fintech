@@ -18,9 +18,10 @@ export async function GET(request: NextRequest, { params }: { params: { employee
         date: string
         status: string
         notes: string
+        image_url: string
       }[]
     >`
-      SELECT id, serial_number, name, email, mobile_number, address, purpose, employee_id, date, status, notes
+      SELECT id, serial_number, name, email, mobile_number, address, purpose, employee_id, date, status, notes, COALESCE(image_url, '') as image_url
       FROM performance_entries
       WHERE employee_id = ${employeeId}
       ORDER BY date DESC
@@ -53,10 +54,11 @@ export async function POST(request: NextRequest, { params }: { params: { employe
         date: string
         status: string
         notes: string
+        image_url: string
       }[]
     >`
       INSERT INTO performance_entries (
-        serial_number, name, email, mobile_number, address, purpose, employee_id, date, status, notes
+        serial_number, name, email, mobile_number, address, purpose, employee_id, date, status, notes, image_url
       ) VALUES (
         ${entry.serialNumber || 1}, 
         ${entry.name || ""}, 
@@ -67,9 +69,10 @@ export async function POST(request: NextRequest, { params }: { params: { employe
         ${employeeId}, 
         ${entry.date || new Date().toISOString().split("T")[0]}, 
         ${entry.status || "pending"}, 
-        ${entry.notes || ""}
+        ${entry.notes || ""},
+        ${entry.imageUrl || ""}
       )
-      RETURNING id, serial_number, name, email, mobile_number, address, purpose, employee_id, date, status, notes
+      RETURNING id, serial_number, name, email, mobile_number, address, purpose, employee_id, date, status, notes, image_url
     `
 
     return NextResponse.json(result[0])
