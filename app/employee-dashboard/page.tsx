@@ -16,6 +16,8 @@ import AIAssistant from "@/components/ai-assistant"
 import AIDocumentAnalyzer from "@/components/ai-document-analyzer"
 import AIClientInsights from "@/components/ai-client-insights"
 import AIMarketTrends from "@/components/ai-market-trends"
+import AccountManagement from "@/components/account-management"
+import CompletedClients from "@/components/completed-clients"
 
 export default function EmployeeDashboard() {
   const [employeeName, setEmployeeName] = useState("")
@@ -26,6 +28,7 @@ export default function EmployeeDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -53,6 +56,11 @@ export default function EmployeeDashboard() {
     setEmployeeId(storedEmployeeId)
     setEmployeeName(storedEmployeeName)
     setCanAccessUptodate(storedCanAccessUptodate)
+
+    // Check if user is admin
+    if (storedEmployeeId === "admin1") {
+      setIsAdmin(true)
+    }
 
     return () => {
       window.removeEventListener("resize", checkIfMobile)
@@ -116,6 +124,7 @@ export default function EmployeeDashboard() {
           isOpen={sidebarOpen}
           isMobile={isMobile}
           toggleSidebar={toggleSidebar}
+          isAdmin={isAdmin}
         />
 
         <main
@@ -141,10 +150,15 @@ export default function EmployeeDashboard() {
               <div className="apple-card p-6 rounded-2xl">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="h-5 w-5 text-blue-600" />
-                  <h1 className="text-2xl font-bold text-gray-900">AI-Powered Dashboard</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    {isAdmin ? "Admin Dashboard" : "AI-Powered Dashboard"}
+                  </h1>
                 </div>
                 <p className="text-gray-600">
-                  Welcome, {employeeName}. Here's your AI-enhanced financial dashboard with insights and analytics.
+                  Welcome, {employeeName}.{" "}
+                  {isAdmin
+                    ? "Manage the entire system and monitor all activities."
+                    : "Here's your AI-enhanced financial dashboard with insights and analytics."}
                 </p>
               </div>
 
@@ -226,6 +240,28 @@ export default function EmployeeDashboard() {
                   <TotalPerformanceTable />
                 </TabsContent>
               </Tabs>
+            </motion.div>
+          )}
+
+          {activeTab === "account-management" && isAdmin && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="apple-card p-6 rounded-2xl"
+            >
+              <AccountManagement />
+            </motion.div>
+          )}
+
+          {activeTab === "completed-clients" && isAdmin && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="apple-card p-6 rounded-2xl"
+            >
+              <CompletedClients />
             </motion.div>
           )}
 

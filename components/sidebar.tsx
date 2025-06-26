@@ -1,20 +1,8 @@
 "use client"
-
-import { Button } from "@/components/ui/button"
-import {
-  BarChart,
-  Calendar,
-  ChevronLeft,
-  Lock,
-  MessageSquare,
-  PieChart,
-  Settings,
-  User,
-  X,
-  FileText,
-  Sparkles,
-} from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { BarChart3, FileText, Home, MessageSquare, User, X, Users, CheckCircle, Shield, Sparkles } from "lucide-react"
 
 interface SidebarProps {
   activeTab: string
@@ -24,7 +12,54 @@ interface SidebarProps {
   isOpen: boolean
   isMobile: boolean
   toggleSidebar: () => void
+  isAdmin?: boolean
 }
+
+const navigationItems = [
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: Home,
+    adminOnly: false,
+  },
+  {
+    id: "performance",
+    label: "Performance",
+    icon: BarChart3,
+    adminOnly: false,
+  },
+  {
+    id: "account-management",
+    label: "Account Management",
+    icon: Users,
+    adminOnly: true,
+  },
+  {
+    id: "completed-clients",
+    label: "Completed Clients",
+    icon: CheckCircle,
+    adminOnly: true,
+  },
+  {
+    id: "uptodate",
+    label: "Up-to-date",
+    icon: FileText,
+    adminOnly: false,
+    requiresAuth: true,
+  },
+  {
+    id: "ai-assistant",
+    label: "AI Assistant",
+    icon: MessageSquare,
+    adminOnly: false,
+  },
+  {
+    id: "profile",
+    label: "Profile",
+    icon: User,
+    adminOnly: false,
+  },
+]
 
 export default function Sidebar({
   activeTab,
@@ -34,130 +69,107 @@ export default function Sidebar({
   isOpen,
   isMobile,
   toggleSidebar,
+  isAdmin = false,
 }: SidebarProps) {
-  const sidebarItems = [
-    {
-      name: "AI Dashboard",
-      icon: <Sparkles className="h-5 w-5" />,
-      value: "dashboard",
-    },
-    {
-      name: "Performance",
-      icon: <BarChart className="h-5 w-5" />,
-      value: "performance",
-    },
-    {
-      name: "Uptodate",
-      icon: <Calendar className="h-5 w-5" />,
-      value: "uptodate",
-      onClick: handleUptodateClick,
-      disabled: !canAccessUptodate,
-    },
-    {
-      name: "AI Assistant",
-      icon: <MessageSquare className="h-5 w-5" />,
-      value: "ai-assistant",
-      highlight: true,
-    },
-    {
-      name: "Analytics",
-      icon: <PieChart className="h-5 w-5" />,
-      value: "analytics",
-    },
-    {
-      name: "Document Analysis",
-      icon: <FileText className="h-5 w-5" />,
-      value: "documents",
-      highlight: true,
-    },
-    {
-      name: "Profile",
-      icon: <User className="h-5 w-5" />,
-      value: "profile",
-    },
-    {
-      name: "Settings",
-      icon: <Settings className="h-5 w-5" />,
-      value: "settings",
-    },
-  ]
+  const handleNavClick = (itemId: string, requiresAuth?: boolean) => {
+    if (itemId === "uptodate" && requiresAuth) {
+      handleUptodateClick()
+    } else {
+      setActiveTab(itemId)
+    }
 
-  if (!isOpen) {
-    return null
+    if (isMobile) {
+      toggleSidebar()
+    }
   }
 
+  const filteredItems = navigationItems.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false
+    return true
+  })
+
   return (
-    <div
-      className={cn(
-        "fixed inset-y-0 left-0 z-20 w-64 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out",
-        isMobile ? "transform translate-x-0" : "",
+    <>
+      {/* Mobile Overlay */}
+      {isMobile && isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={toggleSidebar} />
       )}
-    >
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-blue-600" />
-          AI Navigation
-        </h2>
-        {isMobile && (
-          <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-            <X className="h-5 w-5" />
-          </Button>
-        )}
-        {!isMobile && (
-          <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-        )}
-      </div>
 
-      <div className="flex-1 overflow-auto py-4 px-3">
-        <nav className="space-y-1">
-          {sidebarItems.map((item) => (
-            <Button
-              key={item.value}
-              variant="ghost"
-              className={cn(
-                "w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg py-2.5 px-3",
-                activeTab === item.value && "bg-gray-100 text-gray-900 font-medium",
-                item.disabled && "opacity-50 cursor-not-allowed",
-                item.highlight && "border-l-2 border-blue-500",
-              )}
-              onClick={() => {
-                if (item.onClick) {
-                  item.onClick()
-                } else if (!item.disabled) {
-                  setActiveTab(item.value)
-                  if (isMobile) {
-                    toggleSidebar()
-                  }
-                }
-              }}
-              disabled={item.disabled}
-            >
-              <div className="flex items-center">
-                <span className={cn("mr-3", item.highlight && "text-blue-600")}>{item.icon}</span>
-                <span>{item.name}</span>
-                {item.value === "uptodate" && !canAccessUptodate && <Lock className="h-3.5 w-3.5 ml-2 text-gray-400" />}
-                {item.highlight && (
-                  <span className="ml-auto bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded">AI</span>
-                )}
+      {/* Sidebar */}
+      <div
+        className={cn(
+          "fixed left-0 top-0 z-50 h-full w-64 transform bg-white shadow-xl transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        <div className="flex h-full flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b p-4">
+            <div className="flex items-center space-x-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600">
+                <Sparkles className="h-4 w-4 text-white" />
               </div>
-            </Button>
-          ))}
-        </nav>
-      </div>
-
-      <div className="p-4 border-t border-gray-200">
-        <div className="bg-blue-50 rounded-lg p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="h-4 w-4 text-blue-600" />
-            <p className="text-xs font-medium text-blue-800">AI-Powered Platform</p>
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900">{isAdmin ? "Admin Portal" : "Employee Portal"}</h2>
+                <p className="text-xs text-gray-500">IIFL Capital Services</p>
+              </div>
+            </div>
+            {isMobile && (
+              <Button variant="ghost" size="icon" onClick={toggleSidebar} className="h-8 w-8">
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
-          <p className="text-xs text-gray-600">
-            All features are enhanced with artificial intelligence for better insights and productivity.
-          </p>
+
+          {/* Admin Badge */}
+          {isAdmin && (
+            <div className="mx-4 mt-4 mb-2">
+              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                <Shield className="h-4 w-4 text-red-600" />
+                <span className="text-sm font-medium text-red-800">Administrator</span>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <ScrollArea className="flex-1 px-4">
+            <nav className="space-y-2 py-4">
+              {filteredItems.map((item) => {
+                const Icon = item.icon
+                const isActive = activeTab === item.id
+                const isDisabled = item.requiresAuth && !canAccessUptodate && item.id === "uptodate"
+
+                return (
+                  <Button
+                    key={item.id}
+                    variant={isActive ? "default" : "ghost"}
+                    className={cn(
+                      "w-full justify-start gap-3 h-10",
+                      isActive && "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md",
+                      isDisabled && "opacity-50 cursor-not-allowed",
+                      item.adminOnly && "border-l-2 border-red-200",
+                    )}
+                    onClick={() => !isDisabled && handleNavClick(item.id, item.requiresAuth)}
+                    disabled={isDisabled}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="text-sm font-medium">{item.label}</span>
+                    {item.adminOnly && <Shield className="h-3 w-3 ml-auto text-red-500" />}
+                  </Button>
+                )
+              })}
+            </nav>
+          </ScrollArea>
+
+          {/* Footer */}
+          <div className="border-t p-4">
+            <div className="text-xs text-gray-500 text-center">
+              <p>Powered by AI</p>
+              <p className="mt-1">Partner of IIFL Capital Services Ltd</p>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

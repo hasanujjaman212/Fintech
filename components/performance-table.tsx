@@ -159,12 +159,55 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
       }
 
       const updated = await response.json()
-      setEntries(entries.map((entry) => (entry.id === updated.id ? updated : entry)))
+
+      // If status changed to completed, handle the transfer
+      if (editData.status === "completed" && entries.find((e) => e.id === editData.id)?.status !== "completed") {
+        await handleCompletedTransfer(updated)
+        // Remove from current list
+        setEntries(entries.filter((entry) => entry.id !== updated.id))
+      } else {
+        setEntries(entries.map((entry) => (entry.id === updated.id ? updated : entry)))
+      }
+
       setEditingId(null)
       setEditData(null)
     } catch (error) {
       console.error("Failed to update entry:", error)
       alert("Failed to update entry. Please try again.")
+    }
+  }
+
+  async function handleCompletedTransfer(entry: PerformanceEntry) {
+    try {
+      // Get employee name
+      const employeeData = localStorage.getItem("employeeData")
+      const employeeName = employeeData ? JSON.parse(employeeData).name : "Unknown Employee"
+
+      const response = await fetch("/api/completed-clients", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          originalEntryId: entry.id,
+          serialNumber: entry.serial_number,
+          name: entry.name,
+          email: entry.email,
+          mobileNumber: entry.mobile_number,
+          address: entry.address,
+          purpose: entry.purpose,
+          employeeId: entry.employee_id,
+          employeeName: employeeName,
+          date: entry.date,
+          notes: entry.notes || "",
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to transfer completed client")
+      }
+    } catch (error) {
+      console.error("Failed to transfer completed client:", error)
     }
   }
 

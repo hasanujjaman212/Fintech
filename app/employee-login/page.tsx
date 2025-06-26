@@ -93,20 +93,20 @@ export default function EmployeeLogin() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <Card className="border-gray-200 shadow-lg backdrop-blur-sm bg-white/80">
               <CardHeader className="space-y-1">
-                <CardTitle className="text-2xl font-bold text-center">Admin Login</CardTitle>
+                <CardTitle className="text-2xl font-bold text-center">Employee Login</CardTitle>
                 <CardDescription className="text-center">
-                  Enter your admin credentials to access the dashboard
+                  Enter your employee credentials to access the dashboard
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleSubmit}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="employeeId">Admin ID</Label>
+                    <Label htmlFor="employeeId">Employee ID</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <Input
                         id="employeeId"
-                        placeholder="Enter your admin ID"
+                        placeholder="Enter your employee ID"
                         value={employeeId}
                         onChange={(e) => setEmployeeId(e.target.value)}
                         className="pl-10"
@@ -145,16 +145,6 @@ export default function EmployeeLogin() {
                       <p className="text-sm">{error}</p>
                     </div>
                   )}
-
-                  <div className="text-sm text-gray-500 bg-blue-50 p-3 rounded-md">
-                    <p className="font-medium text-blue-800 mb-1">Admin Credentials:</p>
-                    <p>
-                      ID: <span className="font-mono font-medium">Admin</span>
-                    </p>
-                    <p>
-                      Password: <span className="font-mono font-medium">password123</span>
-                    </p>
-                  </div>
                 </CardContent>
                 <CardFooter>
                   <Button
