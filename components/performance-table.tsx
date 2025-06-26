@@ -136,6 +136,10 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
     }
 
     try {
+      const originalEntry = entries.find((e) => e.id === editData.id)
+      const wasCompleted = originalEntry?.status === "completed"
+      const isNowCompleted = editData.status === "completed"
+
       const response = await fetch(`/api/performance/${employeeId}/${editData.id}`, {
         method: "PUT",
         headers: {
@@ -161,10 +165,12 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
       const updated = await response.json()
 
       // If status changed to completed, handle the transfer
-      if (editData.status === "completed" && entries.find((e) => e.id === editData.id)?.status !== "completed") {
+      if (!wasCompleted && isNowCompleted) {
+        console.log("Client completed, transferring to admin...")
         await handleCompletedTransfer(updated)
         // Remove from current list
         setEntries(entries.filter((entry) => entry.id !== updated.id))
+        alert("Client marked as completed and transferred to admin's completed list!")
       } else {
         setEntries(entries.map((entry) => (entry.id === updated.id ? updated : entry)))
       }
@@ -179,9 +185,22 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
 
   async function handleCompletedTransfer(entry: PerformanceEntry) {
     try {
-      // Get employee name
-      const employeeData = localStorage.getItem("employeeData")
-      const employeeName = employeeData ? JSON.parse(employeeData).name : "Unknown Employee"
+      // Get employee name from localStorage or use a default
+      const storedEmployeeName = localStorage.getItem("employeeName") || "Unknown Employee"
+
+      console.log("Transferring completed client:", {
+        originalEntryId: entry.id,
+        serialNumber: entry.serial_number,
+        name: entry.name,
+        email: entry.email,
+        mobileNumber: entry.mobile_number,
+        address: entry.address,
+        purpose: entry.purpose,
+        employeeId: entry.employee_id,
+        employeeName: storedEmployeeName,
+        date: entry.date,
+        notes: entry.notes || "",
+      })
 
       const response = await fetch("/api/completed-clients", {
         method: "POST",
@@ -197,17 +216,23 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           address: entry.address,
           purpose: entry.purpose,
           employeeId: entry.employee_id,
-          employeeName: employeeName,
+          employeeName: storedEmployeeName,
           date: entry.date,
           notes: entry.notes || "",
         }),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to transfer completed client")
+        const errorData = await response.json()
+        console.error("Transfer failed:", errorData)
+        throw new Error(errorData.error || "Failed to transfer completed client")
       }
+
+      const result = await response.json()
+      console.log("Transfer successful:", result)
     } catch (error) {
       console.error("Failed to transfer completed client:", error)
+      alert("Client was updated but failed to transfer to admin. Please contact support.")
     }
   }
 
@@ -292,7 +317,15 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
       }
 
       const entry = await response.json()
-      setEntries([...entries, entry])
+
+      // If the new entry is marked as completed, transfer it immediately
+      if (entry.status === "completed") {
+        await handleCompletedTransfer(entry)
+        alert("Client added and marked as completed! Transferred to admin's completed list.")
+      } else {
+        setEntries([...entries, entry])
+      }
+
       setNewEntry({
         name: "",
         email: "",
