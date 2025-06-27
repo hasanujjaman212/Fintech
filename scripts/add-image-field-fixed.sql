@@ -1,15 +1,19 @@
--- Add image_url field to performance_entries table
-ALTER TABLE performance_entries ADD COLUMN IF NOT EXISTS image_url TEXT;
-
--- Add image_url field to completed_clients table (if it exists)
+-- Add image_url column to performance_entries table if it doesn't exist
 DO $$ 
 BEGIN
-    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'completed_clients') THEN
-        ALTER TABLE completed_clients ADD COLUMN IF NOT EXISTS image_url TEXT;
-        -- Update existing records to have empty image_url
-        UPDATE completed_clients SET image_url = '' WHERE image_url IS NULL;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'performance_entries') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'performance_entries' AND column_name = 'image_url') THEN
+            ALTER TABLE performance_entries ADD COLUMN image_url TEXT DEFAULT '';
+        END IF;
     END IF;
 END $$;
 
--- Update existing records to have empty image_url
-UPDATE performance_entries SET image_url = '' WHERE image_url IS NULL;
+-- Add image_url column to completed_clients table if it doesn't exist
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'completed_clients') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'completed_clients' AND column_name = 'image_url') THEN
+            ALTER TABLE completed_clients ADD COLUMN image_url TEXT DEFAULT '';
+        END IF;
+    END IF;
+END $$;

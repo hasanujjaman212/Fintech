@@ -29,7 +29,7 @@ interface Account {
   email: string
   mobile_number: string
   password: string
-  account_type: "admin" | "employee" | "client"
+  account_type: "admin" | "manager" | "employee" | "client"
   role?: string
   department?: string
   can_access_uptodate?: boolean
@@ -53,7 +53,7 @@ export default function AccountManagement() {
     email: "",
     mobile_number: "",
     password: "",
-    account_type: "employee" as "admin" | "employee" | "client",
+    account_type: "employee" as "admin" | "manager" | "employee" | "client",
     role: "",
     department: "",
     can_access_uptodate: false,
@@ -185,6 +185,8 @@ export default function AccountManagement() {
     switch (type) {
       case "admin":
         return "bg-red-100 text-red-800"
+      case "manager":
+        return "bg-purple-100 text-purple-800"
       case "employee":
         return "bg-blue-100 text-blue-800"
       case "client":
@@ -234,7 +236,7 @@ export default function AccountManagement() {
                   <Label htmlFor="account_type">Account Type *</Label>
                   <Select
                     value={formData.account_type}
-                    onValueChange={(value: "admin" | "employee" | "client") =>
+                    onValueChange={(value: "admin" | "manager" | "employee" | "client") =>
                       setFormData({ ...formData, account_type: value })
                     }
                   >
@@ -243,6 +245,7 @@ export default function AccountManagement() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
                       <SelectItem value="employee">Employee</SelectItem>
                       <SelectItem value="client">Client</SelectItem>
                     </SelectContent>
@@ -294,7 +297,9 @@ export default function AccountManagement() {
                 </div>
               </div>
 
-              {(formData.account_type === "admin" || formData.account_type === "employee") && (
+              {(formData.account_type === "admin" ||
+                formData.account_type === "manager" ||
+                formData.account_type === "employee") && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>

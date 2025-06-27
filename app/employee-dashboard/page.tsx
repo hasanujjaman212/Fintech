@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { FileText, User, CreditCard, PieChart, MessageSquare, Sparkles } from "lucide-react"
+import { FileText, PieChart, MessageSquare, Sparkles } from "lucide-react"
 import { motion } from "framer-motion"
 import DashboardHeader from "@/components/dashboard-header"
 import Sidebar from "@/components/sidebar"
@@ -12,12 +11,12 @@ import TotalPerformanceTable from "@/components/total-performance-table"
 import TwoFactorAuth from "@/components/two-factor-auth"
 import EmployeeReport from "@/components/employee-report"
 import FinancialInsights from "@/components/financial-insights"
-import AIAssistant from "@/components/ai-assistant"
 import AIDocumentAnalyzer from "@/components/ai-document-analyzer"
 import AIClientInsights from "@/components/ai-client-insights"
 import AIMarketTrends from "@/components/ai-market-trends"
 import AccountManagement from "@/components/account-management"
 import CompletedClients from "@/components/completed-clients"
+import ManagerDashboard from "@/components/manager-dashboard"
 
 export default function EmployeeDashboard() {
   const [employeeName, setEmployeeName] = useState("")
@@ -29,6 +28,8 @@ export default function EmployeeDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isManager, setIsManager] = useState(false)
+  const [accountType, setAccountType] = useState("")
   const router = useRouter()
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function EmployeeDashboard() {
     const storedEmployeeId = localStorage.getItem("employeeId")
     const storedEmployeeName = localStorage.getItem("employeeName")
     const storedCanAccessUptodate = localStorage.getItem("canAccessUptodate") === "true"
+    const storedAccountType = localStorage.getItem("accountType") || ""
 
     if (!storedEmployeeId || !storedEmployeeName) {
       router.push("/employee-login")
@@ -56,10 +58,13 @@ export default function EmployeeDashboard() {
     setEmployeeId(storedEmployeeId)
     setEmployeeName(storedEmployeeName)
     setCanAccessUptodate(storedCanAccessUptodate)
+    setAccountType(storedAccountType)
 
-    // Check if user is admin
-    if (storedEmployeeId === "admin1") {
+    // Check user type
+    if (storedEmployeeId === "admin1" || storedAccountType === "admin") {
       setIsAdmin(true)
+    } else if (storedAccountType === "manager") {
+      setIsManager(true)
     }
 
     return () => {
@@ -73,6 +78,7 @@ export default function EmployeeDashboard() {
     localStorage.removeItem("employeeName")
     localStorage.removeItem("canAccessUptodate")
     localStorage.removeItem("employeeData")
+    localStorage.removeItem("accountType")
     router.push("/")
   }
 
@@ -125,6 +131,7 @@ export default function EmployeeDashboard() {
           isMobile={isMobile}
           toggleSidebar={toggleSidebar}
           isAdmin={isAdmin}
+          isManager={isManager}
         />
 
         <main
@@ -151,14 +158,16 @@ export default function EmployeeDashboard() {
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="h-5 w-5 text-blue-600" />
                   <h1 className="text-2xl font-bold text-gray-900">
-                    {isAdmin ? "Admin Dashboard" : "AI-Powered Dashboard"}
+                    {isAdmin ? "Admin Dashboard" : isManager ? "Manager Dashboard" : "AI-Powered Dashboard"}
                   </h1>
                 </div>
                 <p className="text-gray-600">
                   Welcome, {employeeName}.{" "}
                   {isAdmin
                     ? "Manage the entire system and monitor all activities."
-                    : "Here's your AI-enhanced financial dashboard with insights and analytics."}
+                    : isManager
+                      ? "Monitor and oversee all pending and in-progress client interactions."
+                      : "Here's your AI-enhanced financial dashboard with insights and analytics."}
                 </p>
               </div>
 
@@ -218,125 +227,54 @@ export default function EmployeeDashboard() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
-              className="apple-card p-6 rounded-2xl"
+              className="space-y-6"
             >
-              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-blue-600" />
-                AI-Enhanced Performance Dashboard
-              </h2>
-              {isAdmin ? (
-                <Tabs defaultValue="self" className="w-full">
-                  <TabsList className="mb-4 bg-gray-100 p-1 rounded-lg">
-                    <TabsTrigger value="self" className="rounded-md data-[state=active]:bg-white">
-                      Self
-                    </TabsTrigger>
-                    <TabsTrigger value="total" className="rounded-md data-[state=active]:bg-white">
-                      Total
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="self">
-                    <PerformanceTable employeeId={employeeId} />
-                  </TabsContent>
-                  <TabsContent value="total">
-                    <TotalPerformanceTable />
-                  </TabsContent>
-                </Tabs>
-              ) : (
-                <PerformanceTable employeeId={employeeId} />
-              )}
+              <PerformanceTable />
+              <TotalPerformanceTable />
             </motion.div>
           )}
 
-          {activeTab === "account-management" && isAdmin && (
+          {activeTab === "report" && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
-              className="apple-card p-6 rounded-2xl"
+              className="space-y-6"
+            >
+              <EmployeeReport />
+            </motion.div>
+          )}
+
+          {activeTab === "account" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-6"
             >
               <AccountManagement />
             </motion.div>
           )}
 
-          {activeTab === "completed-clients" && isAdmin && (
+          {activeTab === "clients" && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
-              className="apple-card p-6 rounded-2xl"
+              className="space-y-6"
             >
               <CompletedClients />
             </motion.div>
           )}
 
-          {activeTab === "uptodate" && authenticated && (
+          {activeTab === "manager" && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
-              className="apple-card p-6 rounded-2xl"
+              className="space-y-6"
             >
-              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-blue-600" />
-                AI-Analyzed Company Data
-              </h2>
-              <Tabs defaultValue="report">
-                <TabsList className="mb-4 bg-gray-100 p-1 rounded-lg">
-                  <TabsTrigger value="report" className="rounded-md data-[state=active]:bg-white">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Report
-                  </TabsTrigger>
-                  <TabsTrigger value="personal" className="rounded-md data-[state=active]:bg-white">
-                    <User className="h-4 w-4 mr-2" />
-                    Personal Details
-                  </TabsTrigger>
-                  <TabsTrigger value="banking" className="rounded-md data-[state=active]:bg-white">
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Banking Details
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="report">
-                  <EmployeeReport employeeId={employeeId} />
-                </TabsContent>
-                <TabsContent value="personal">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-800">Personal Details</h3>
-                    {/* Personal details content would go here */}
-                  </div>
-                </TabsContent>
-                <TabsContent value="banking">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-800">Banking Details</h3>
-                    {/* Banking details content would go here */}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </motion.div>
-          )}
-
-          {activeTab === "ai-assistant" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="h-[calc(100vh-120px)]"
-            >
-              <AIAssistant employeeId={employeeId} />
-            </motion.div>
-          )}
-
-          {activeTab === "profile" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="apple-card p-6 rounded-2xl"
-            >
-              <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-blue-600" />
-                AI-Enhanced Employee Profile
-              </h2>
-              <EmployeeReport employeeId={employeeId} showFullProfile={true} />
+              <ManagerDashboard />
             </motion.div>
           )}
         </main>
