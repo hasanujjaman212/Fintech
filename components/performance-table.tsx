@@ -136,10 +136,6 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
     }
 
     try {
-      const originalEntry = entries.find((e) => e.id === editData.id)
-      const wasCompleted = originalEntry?.status === "completed"
-      const isNowCompleted = editData.status === "completed"
-
       const response = await fetch(`/api/performance/${employeeId}/${editData.id}`, {
         method: "PUT",
         headers: {
@@ -148,29 +144,32 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         body: JSON.stringify({
           name: editData.name.trim(),
           email: editData.email.trim(),
-          mobileNumber: editData.mobile_number.trim(),
+          mobile_number: editData.mobile_number.trim(), // Corrected
           address: editData.address.trim(),
           purpose: editData.purpose.trim(),
-          employeeId: editData.employee_id,
+          employee_id: editData.employee_id, // Corrected
           status: editData.status,
           notes: editData.notes?.trim() || "",
         }),
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to update entry")
+        const contentType = response.headers.get("content-type")
+        let errorMessage = `Failed to update entry. Server responded with status: ${response.status}`
+        if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+        }
+        throw new Error(errorMessage)
       }
 
       const updated = await response.json()
 
       // If status changed to completed, handle the transfer
-      if (!wasCompleted && isNowCompleted) {
-        console.log("Client completed, transferring to admin...")
+      if (editData.status === "completed" && entries.find((e) => e.id === editData.id)?.status !== "completed") {
         await handleCompletedTransfer(updated)
         // Remove from current list
         setEntries(entries.filter((entry) => entry.id !== updated.id))
-        alert("Client marked as completed and transferred to admin's completed list!")
       } else {
         setEntries(entries.map((entry) => (entry.id === updated.id ? updated : entry)))
       }
@@ -178,29 +177,17 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
       setEditingId(null)
       setEditData(null)
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred."
+      alert(`Failed to update entry: ${errorMessage}`)
       console.error("Failed to update entry:", error)
-      alert("Failed to update entry. Please try again.")
     }
   }
 
   async function handleCompletedTransfer(entry: PerformanceEntry) {
     try {
-      // Get employee name from localStorage or use a default
-      const storedEmployeeName = localStorage.getItem("employeeName") || "Unknown Employee"
-
-      console.log("Transferring completed client:", {
-        originalEntryId: entry.id,
-        serialNumber: entry.serial_number,
-        name: entry.name,
-        email: entry.email,
-        mobileNumber: entry.mobile_number,
-        address: entry.address,
-        purpose: entry.purpose,
-        employeeId: entry.employee_id,
-        employeeName: storedEmployeeName,
-        date: entry.date,
-        notes: entry.notes || "",
-      })
+      // Get employee name
+      const employeeData = localStorage.getItem("employeeData")
+      const employeeName = employeeData ? JSON.parse(employeeData).name : "Unknown Employee"
 
       const response = await fetch("/api/completed-clients", {
         method: "POST",
@@ -208,31 +195,25 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          originalEntryId: entry.id,
-          serialNumber: entry.serial_number,
+          original_entry_id: entry.id, // Corrected
+          serial_number: entry.serial_number, // Corrected
           name: entry.name,
           email: entry.email,
-          mobileNumber: entry.mobile_number,
+          mobile_number: entry.mobile_number, // Corrected
           address: entry.address,
           purpose: entry.purpose,
-          employeeId: entry.employee_id,
-          employeeName: storedEmployeeName,
+          employee_id: entry.employee_id, // Corrected
+          employee_name: employeeName, // Corrected
           date: entry.date,
           notes: entry.notes || "",
         }),
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        console.error("Transfer failed:", errorData)
-        throw new Error(errorData.error || "Failed to transfer completed client")
+        throw new Error("Failed to transfer completed client")
       }
-
-      const result = await response.json()
-      console.log("Transfer successful:", result)
     } catch (error) {
       console.error("Failed to transfer completed client:", error)
-      alert("Client was updated but failed to transfer to admin. Please contact support.")
     }
   }
 
@@ -298,13 +279,13 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          serialNumber: newSerialNumber,
+          serial_number: newSerialNumber, // Corrected
           name: newEntry.name?.trim() || "",
           email: newEntry.email?.trim() || "",
-          mobileNumber: newEntry.mobile_number?.trim() || "",
+          mobile_number: newEntry.mobile_number?.trim() || "", // Corrected
           address: newEntry.address?.trim() || "",
           purpose: newEntry.purpose?.trim() || "",
-          employeeId: employeeId,
+          employee_id: employeeId, // Corrected
           date: new Date().toISOString().split("T")[0],
           status: newEntry.status || "pending",
           notes: newEntry.notes?.trim() || "",
@@ -312,20 +293,17 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to add entry")
+        const contentType = response.headers.get("content-type")
+        let errorMessage = `Failed to add client. Server responded with status: ${response.status}`
+        if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+        }
+        throw new Error(errorMessage)
       }
 
       const entry = await response.json()
-
-      // If the new entry is marked as completed, transfer it immediately
-      if (entry.status === "completed") {
-        await handleCompletedTransfer(entry)
-        alert("Client added and marked as completed! Transferred to admin's completed list.")
-      } else {
-        setEntries([...entries, entry])
-      }
-
+      setEntries([...entries, entry])
       setNewEntry({
         name: "",
         email: "",
@@ -338,8 +316,9 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
       setValidationErrors({})
       setIsAddDialogOpen(false)
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred."
+      setValidationErrors({ general: errorMessage })
       console.error("Failed to add entry:", error)
-      setValidationErrors({ general: "Failed to add client. Please try again." })
     } finally {
       setIsSubmitting(false)
     }
