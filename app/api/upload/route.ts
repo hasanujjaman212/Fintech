@@ -20,11 +20,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File size must be less than 5MB" }, { status: 400 })
     }
 
-    // Generate unique filename
-    const filename = `${Date.now()}-${file.name}`
-
     // Upload to Vercel Blob
-    const blob = await put(filename, file, {
+    const blob = await put(file.name, file, {
       access: "public",
     })
 

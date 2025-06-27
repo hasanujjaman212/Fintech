@@ -1,14 +1,13 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -18,51 +17,35 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
-import { Trash2, Edit, Plus, Eye, EyeOff } from "lucide-react"
-import { Switch } from "@/components/ui/switch"
+import { Plus, Pencil, Trash2, Users, Shield, UserCheck, User } from "lucide-react"
 
 interface Account {
-  id: number
-  account_id: string
+  id: string
+  username: string
   name: string
   email: string
-  mobile_number: string
-  password: string
   account_type: "admin" | "manager" | "employee" | "client"
   role?: string
   department?: string
-  can_access_uptodate?: boolean
-  industry?: string
-  portfolio_value?: number
-  risk_profile?: string
-  account_manager_id?: string
-  is_active: boolean
   created_at: string
 }
 
 export default function AccountManagement() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
-  const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({})
-  const [formData, setFormData] = useState({
-    account_id: "",
+  const [newAccount, setNewAccount] = useState({
+    username: "",
+    password: "",
     name: "",
     email: "",
-    mobile_number: "",
-    password: "",
-    account_type: "employee" as "admin" | "manager" | "employee" | "client",
+    account_type: "employee" as const,
     role: "",
     department: "",
-    can_access_uptodate: false,
-    industry: "",
-    portfolio_value: "",
-    risk_profile: "",
-    account_manager_id: "",
-    is_active: true,
   })
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     fetchAccounts()
@@ -71,10 +54,9 @@ export default function AccountManagement() {
   const fetchAccounts = async () => {
     try {
       const response = await fetch("/api/accounts")
-      if (response.ok) {
-        const data = await response.json()
-        setAccounts(data)
-      }
+      if (!response.ok) throw new Error("Failed to fetch accounts")
+      const data = await response.json()
+      setAccounts(data)
     } catch (error) {
       console.error("Error fetching accounts:", error)
     } finally {
@@ -82,166 +64,264 @@ export default function AccountManagement() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const validateForm = (account: typeof newAccount) => {
+    const errors: Record<string, string> = {}
+
+    if (!account.username.trim()) {
+      errors.username = "Username is required"
+    }
+
+    if (!account.password.trim()) {
+      errors.password = "Password is required"
+    } else if (account.password.length < 6) {
+      errors.password = "Password must be at least 6 characters"
+    }
+
+    if (!account.name.trim()) {
+      errors.name = "Name is required"
+    }
+
+    if (!account.email.trim()) {
+      errors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account.email)) {
+      errors.email = "Please enter a valid email address"
+    }
+
+    if (!account.account_type) {
+      errors.account_type = "Account type is required"
+    }
+
+    return errors
+  }
+
+  const handleAddAccount = async () => {
+    const errors = validateForm(newAccount)
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors)
+      return
+    }
 
     try {
-      const url = editingAccount ? `/api/accounts/${editingAccount.id}` : "/api/accounts"
-      const method = editingAccount ? "PUT" : "POST"
+      const response = await fetch("/api/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newAccount),
+      })
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to create account")
+      }
+
+      await fetchAccounts()
+      setIsAddDialogOpen(false)
+      setNewAccount({
+        username: "",
+        password: "",
+        name: "",
+        email: "",
+        account_type: "employee",
+        role: "",
+        department: "",
+      })
+      setValidationErrors({})
+    } catch (error) {
+      console.error("Error creating account:", error)
+      setValidationErrors({ general: error instanceof Error ? error.message : "Failed to create account" })
+    }
+  }
+
+  const handleEditAccount = (account: Account) => {
+    setEditingAccount(account)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleUpdateAccount = async () => {
+    if (!editingAccount) return
+
+    try {
+      const response = await fetch(`/api/accounts/${editingAccount.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
-          portfolio_value: formData.portfolio_value ? Number.parseFloat(formData.portfolio_value) : null,
+          name: editingAccount.name,
+          email: editingAccount.email,
+          account_type: editingAccount.account_type,
+          role: editingAccount.role,
+          department: editingAccount.department,
         }),
       })
 
-      if (response.ok) {
-        await fetchAccounts()
-        setIsDialogOpen(false)
-        resetForm()
-      } else {
-        const error = await response.json()
-        alert(error.message || "Error saving account")
-      }
+      if (!response.ok) throw new Error("Failed to update account")
+
+      await fetchAccounts()
+      setIsEditDialogOpen(false)
+      setEditingAccount(null)
     } catch (error) {
-      console.error("Error saving account:", error)
-      alert("Error saving account")
+      console.error("Error updating account:", error)
     }
   }
 
-  const handleEdit = (account: Account) => {
-    setEditingAccount(account)
-    setFormData({
-      account_id: account.account_id,
-      name: account.name,
-      email: account.email,
-      mobile_number: account.mobile_number,
-      password: account.password,
-      account_type: account.account_type,
-      role: account.role || "",
-      department: account.department || "",
-      can_access_uptodate: account.can_access_uptodate || false,
-      industry: account.industry || "",
-      portfolio_value: account.portfolio_value?.toString() || "",
-      risk_profile: account.risk_profile || "",
-      account_manager_id: account.account_manager_id || "",
-      is_active: account.is_active,
-    })
-    setIsDialogOpen(true)
-  }
+  const handleDeleteAccount = async (accountId: string) => {
+    if (!confirm("Are you sure you want to delete this account?")) return
 
-  const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this account?")) {
-      try {
-        const response = await fetch(`/api/accounts/${id}`, {
-          method: "DELETE",
-        })
+    try {
+      const response = await fetch(`/api/accounts/${accountId}`, {
+        method: "DELETE",
+      })
 
-        if (response.ok) {
-          await fetchAccounts()
-        } else {
-          alert("Error deleting account")
-        }
-      } catch (error) {
-        console.error("Error deleting account:", error)
-        alert("Error deleting account")
-      }
+      if (!response.ok) throw new Error("Failed to delete account")
+
+      await fetchAccounts()
+    } catch (error) {
+      console.error("Error deleting account:", error)
     }
   }
 
-  const resetForm = () => {
-    setFormData({
-      account_id: "",
-      name: "",
-      email: "",
-      mobile_number: "",
-      password: "",
-      account_type: "employee",
-      role: "",
-      department: "",
-      can_access_uptodate: false,
-      industry: "",
-      portfolio_value: "",
-      risk_profile: "",
-      account_manager_id: "",
-      is_active: true,
-    })
-    setEditingAccount(null)
-  }
-
-  const togglePasswordVisibility = (accountId: string) => {
-    setShowPasswords((prev) => ({
-      ...prev,
-      [accountId]: !prev[accountId],
-    }))
-  }
-
-  const getAccountTypeColor = (type: string) => {
+  const getAccountTypeIcon = (type: string) => {
     switch (type) {
       case "admin":
-        return "bg-red-100 text-red-800"
+        return <Shield className="h-4 w-4 text-red-600" />
       case "manager":
-        return "bg-purple-100 text-purple-800"
+        return <UserCheck className="h-4 w-4 text-purple-600" />
       case "employee":
-        return "bg-blue-100 text-blue-800"
+        return <User className="h-4 w-4 text-blue-600" />
       case "client":
-        return "bg-green-100 text-green-800"
+        return <Users className="h-4 w-4 text-green-600" />
       default:
-        return "bg-gray-100 text-gray-800"
+        return <User className="h-4 w-4 text-gray-600" />
+    }
+  }
+
+  const getAccountTypeBadge = (type: string) => {
+    switch (type) {
+      case "admin":
+        return <Badge className="bg-red-100 text-red-800 border-red-200">Admin</Badge>
+      case "manager":
+        return <Badge className="bg-purple-100 text-purple-800 border-purple-200">Manager</Badge>
+      case "employee":
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Employee</Badge>
+      case "client":
+        return <Badge className="bg-green-100 text-green-800 border-green-200">Client</Badge>
+      default:
+        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">{type}</Badge>
     }
   }
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading accounts...</div>
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Account Management</h2>
-          <p className="text-muted-foreground">Manage all user accounts in the system</p>
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <Users className="h-6 w-6 text-blue-600" />
+            Account Management
+          </h2>
+          <p className="text-muted-foreground">Manage user accounts and permissions</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={resetForm}>
+            <Button className="bg-blue-600 hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-2" />
               Add Account
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>{editingAccount ? "Edit Account" : "Create New Account"}</DialogTitle>
-              <DialogDescription>
-                {editingAccount ? "Update account information" : "Add a new user account to the system"}
-              </DialogDescription>
+              <DialogTitle>Add New Account</DialogTitle>
+              <DialogDescription>Create a new user account with specified permissions.</DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="account_id">Account ID *</Label>
+            <div className="grid gap-4 py-4">
+              {validationErrors.general && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">{validationErrors.general}</div>
+              )}
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="username" className="text-right">
+                  Username
+                </Label>
+                <div className="col-span-3">
                   <Input
-                    id="account_id"
-                    value={formData.account_id}
-                    onChange={(e) => setFormData({ ...formData, account_id: e.target.value })}
-                    required
+                    id="username"
+                    value={newAccount.username}
+                    onChange={(e) => setNewAccount({ ...newAccount, username: e.target.value })}
+                    className={validationErrors.username ? "border-red-500" : ""}
                   />
+                  {validationErrors.username && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.username}</p>
+                  )}
                 </div>
-                <div>
-                  <Label htmlFor="account_type">Account Type *</Label>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="password" className="text-right">
+                  Password
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newAccount.password}
+                    onChange={(e) => setNewAccount({ ...newAccount, password: e.target.value })}
+                    className={validationErrors.password ? "border-red-500" : ""}
+                  />
+                  {validationErrors.password && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.password}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Name
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="name"
+                    value={newAccount.name}
+                    onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
+                    className={validationErrors.name ? "border-red-500" : ""}
+                  />
+                  {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="email" className="text-right">
+                  Email
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newAccount.email}
+                    onChange={(e) => setNewAccount({ ...newAccount, email: e.target.value })}
+                    className={validationErrors.email ? "border-red-500" : ""}
+                  />
+                  {validationErrors.email && <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="account_type" className="text-right">
+                  Account Type
+                </Label>
+                <div className="col-span-3">
                   <Select
-                    value={formData.account_type}
+                    value={newAccount.account_type}
                     onValueChange={(value: "admin" | "manager" | "employee" | "client") =>
-                      setFormData({ ...formData, account_type: value })
+                      setNewAccount({ ...newAccount, account_type: value })
                     }
                   >
-                    <SelectTrigger>
-                      <SelectValue />
+                    <SelectTrigger className={validationErrors.account_type ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Select account type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">Admin</SelectItem>
@@ -250,223 +330,209 @@ export default function AccountManagement() {
                       <SelectItem value="client">Client</SelectItem>
                     </SelectContent>
                   </Select>
+                  {validationErrors.account_type && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.account_type}</p>
+                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="mobile_number">Mobile Number *</Label>
-                  <Input
-                    id="mobile_number"
-                    value={formData.mobile_number}
-                    onChange={(e) => setFormData({ ...formData, mobile_number: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="password">Password *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              {(formData.account_type === "admin" ||
-                formData.account_type === "manager" ||
-                formData.account_type === "employee") && (
+              {(newAccount.account_type === "admin" ||
+                newAccount.account_type === "manager" ||
+                newAccount.account_type === "employee") && (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="role">Role</Label>
-                      <Input
-                        id="role"
-                        value={formData.role}
-                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="department">Department</Label>
-                      <Input
-                        id="department"
-                        value={formData.department}
-                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="can_access_uptodate"
-                      checked={formData.can_access_uptodate}
-                      onCheckedChange={(checked) => setFormData({ ...formData, can_access_uptodate: checked })}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="role" className="text-right">
+                      Role
+                    </Label>
+                    <Input
+                      id="role"
+                      value={newAccount.role}
+                      onChange={(e) => setNewAccount({ ...newAccount, role: e.target.value })}
+                      className="col-span-3"
+                      placeholder="e.g., Senior Analyst, Team Lead"
                     />
-                    <Label htmlFor="can_access_uptodate">Can Access Up-to-date Features</Label>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="department" className="text-right">
+                      Department
+                    </Label>
+                    <Input
+                      id="department"
+                      value={newAccount.department}
+                      onChange={(e) => setNewAccount({ ...newAccount, department: e.target.value })}
+                      className="col-span-3"
+                      placeholder="e.g., Finance, Operations"
+                    />
                   </div>
                 </>
               )}
-
-              {formData.account_type === "client" && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="industry">Industry</Label>
-                      <Input
-                        id="industry"
-                        value={formData.industry}
-                        onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="portfolio_value">Portfolio Value</Label>
-                      <Input
-                        id="portfolio_value"
-                        type="number"
-                        step="0.01"
-                        value={formData.portfolio_value}
-                        onChange={(e) => setFormData({ ...formData, portfolio_value: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="risk_profile">Risk Profile</Label>
-                      <Select
-                        value={formData.risk_profile}
-                        onValueChange={(value) => setFormData({ ...formData, risk_profile: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select risk profile" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Conservative">Conservative</SelectItem>
-                          <SelectItem value="Moderate">Moderate</SelectItem>
-                          <SelectItem value="Aggressive">Aggressive</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="account_manager_id">Account Manager ID</Label>
-                      <Input
-                        id="account_manager_id"
-                        value={formData.account_manager_id}
-                        onChange={(e) => setFormData({ ...formData, account_manager_id: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                />
-                <Label htmlFor="is_active">Active Account</Label>
-              </div>
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">{editingAccount ? "Update Account" : "Create Account"}</Button>
-              </DialogFooter>
-            </form>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleAddAccount}>
+                Create Account
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Accounts ({accounts.length})</CardTitle>
-          <CardDescription>Manage user accounts across the system</CardDescription>
+          <CardTitle>User Accounts ({accounts.length})</CardTitle>
+          <CardDescription>Manage all user accounts and their permissions</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Account ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Role/Industry</TableHead>
-                  <TableHead>Password</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Username</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Account Type</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Department</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {accounts.map((account) => (
+                <TableRow key={account.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {getAccountTypeIcon(account.account_type)}
+                      {account.username}
+                    </div>
+                  </TableCell>
+                  <TableCell>{account.name}</TableCell>
+                  <TableCell>{account.email}</TableCell>
+                  <TableCell>{getAccountTypeBadge(account.account_type)}</TableCell>
+                  <TableCell>{account.role || "-"}</TableCell>
+                  <TableCell>{account.department || "-"}</TableCell>
+                  <TableCell>{new Date(account.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEditAccount(account)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteAccount(account.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {accounts.map((account) => (
-                  <TableRow key={account.id}>
-                    <TableCell className="font-medium">{account.account_id}</TableCell>
-                    <TableCell>{account.name}</TableCell>
-                    <TableCell>{account.email}</TableCell>
-                    <TableCell>
-                      <Badge className={getAccountTypeColor(account.account_type)}>{account.account_type}</Badge>
-                    </TableCell>
-                    <TableCell>{account.account_type === "client" ? account.industry : account.role}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono text-sm">
-                          {showPasswords[account.account_id] ? account.password : "••••••••"}
-                        </span>
-                        <Button variant="ghost" size="sm" onClick={() => togglePasswordVisibility(account.account_id)}>
-                          {showPasswords[account.account_id] ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={account.is_active ? "default" : "secondary"}>
-                        {account.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(account)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleDelete(account.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Account</DialogTitle>
+            <DialogDescription>Update account information and permissions.</DialogDescription>
+          </DialogHeader>
+          {editingAccount && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="edit-name"
+                  value={editingAccount.name}
+                  onChange={(e) => setEditingAccount({ ...editingAccount, name: e.target.value })}
+                  className="col-span-3"
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-email" className="text-right">
+                  Email
+                </Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editingAccount.email}
+                  onChange={(e) => setEditingAccount({ ...editingAccount, email: e.target.value })}
+                  className="col-span-3"
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-account-type" className="text-right">
+                  Account Type
+                </Label>
+                <Select
+                  value={editingAccount.account_type}
+                  onValueChange={(value: "admin" | "manager" | "employee" | "client") =>
+                    setEditingAccount({ ...editingAccount, account_type: value })
+                  }
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                    <SelectItem value="employee">Employee</SelectItem>
+                    <SelectItem value="client">Client</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {(editingAccount.account_type === "admin" ||
+                editingAccount.account_type === "manager" ||
+                editingAccount.account_type === "employee") && (
+                <>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-role" className="text-right">
+                      Role
+                    </Label>
+                    <Input
+                      id="edit-role"
+                      value={editingAccount.role || ""}
+                      onChange={(e) => setEditingAccount({ ...editingAccount, role: e.target.value })}
+                      className="col-span-3"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-department" className="text-right">
+                      Department
+                    </Label>
+                    <Input
+                      id="edit-department"
+                      value={editingAccount.department || ""}
+                      onChange={(e) => setEditingAccount({ ...editingAccount, department: e.target.value })}
+                      className="col-span-3"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleUpdateAccount}>
+              Update Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

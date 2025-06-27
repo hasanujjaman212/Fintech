@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { FileText, PieChart, MessageSquare, Sparkles } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { FileText, User, CreditCard, PieChart, MessageSquare, Sparkles } from "lucide-react"
 import { motion } from "framer-motion"
 import DashboardHeader from "@/components/dashboard-header"
 import Sidebar from "@/components/sidebar"
@@ -11,6 +12,7 @@ import TotalPerformanceTable from "@/components/total-performance-table"
 import TwoFactorAuth from "@/components/two-factor-auth"
 import EmployeeReport from "@/components/employee-report"
 import FinancialInsights from "@/components/financial-insights"
+import AIAssistant from "@/components/ai-assistant"
 import AIDocumentAnalyzer from "@/components/ai-document-analyzer"
 import AIClientInsights from "@/components/ai-client-insights"
 import AIMarketTrends from "@/components/ai-market-trends"
@@ -227,54 +229,144 @@ export default function EmployeeDashboard() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
-              className="space-y-6"
+              className="apple-card p-6 rounded-2xl"
             >
-              <PerformanceTable />
-              <TotalPerformanceTable />
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-blue-600" />
+                AI-Enhanced Performance Dashboard
+              </h2>
+              {isAdmin ? (
+                <Tabs defaultValue="self" className="w-full">
+                  <TabsList className="mb-4 bg-gray-100 p-1 rounded-lg">
+                    <TabsTrigger value="self" className="rounded-md data-[state=active]:bg-white">
+                      Self
+                    </TabsTrigger>
+                    <TabsTrigger value="total" className="rounded-md data-[state=active]:bg-white">
+                      Total
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="self">
+                    <PerformanceTable employeeId={employeeId} />
+                  </TabsContent>
+                  <TabsContent value="total">
+                    <TotalPerformanceTable />
+                  </TabsContent>
+                </Tabs>
+              ) : (
+                <PerformanceTable employeeId={employeeId} />
+              )}
             </motion.div>
           )}
 
-          {activeTab === "report" && (
+          {activeTab === "manager-dashboard" && isManager && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
-              className="space-y-6"
+              className="apple-card p-6 rounded-2xl"
             >
-              <EmployeeReport />
+              <ManagerDashboard />
             </motion.div>
           )}
 
-          {activeTab === "account" && (
+          {activeTab === "account-management" && isAdmin && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
-              className="space-y-6"
+              className="apple-card p-6 rounded-2xl"
             >
               <AccountManagement />
             </motion.div>
           )}
 
-          {activeTab === "clients" && (
+          {activeTab === "completed-clients" && isAdmin && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
-              className="space-y-6"
+              className="apple-card p-6 rounded-2xl"
             >
               <CompletedClients />
             </motion.div>
           )}
 
-          {activeTab === "manager" && (
+          {activeTab === "uptodate" && authenticated && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
-              className="space-y-6"
+              className="apple-card p-6 rounded-2xl"
             >
-              <ManagerDashboard />
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-blue-600" />
+                AI-Analyzed Company Data
+              </h2>
+              <Tabs defaultValue="report">
+                <TabsList className="mb-4 bg-gray-100 p-1 rounded-lg">
+                  <TabsTrigger value="report" className="rounded-md data-[state=active]:bg-white">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Report
+                  </TabsTrigger>
+                  <TabsTrigger value="personal" className="rounded-md data-[state=active]:bg-white">
+                    <User className="h-4 w-4 mr-2" />
+                    Personal Details
+                  </TabsTrigger>
+                  <TabsTrigger value="banking" className="rounded-md data-[state=active]:bg-white">
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Banking Details
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="report">
+                  <EmployeeReport employeeId={employeeId} />
+                </TabsContent>
+                <TabsContent value="personal">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-gray-800">Personal Details</h3>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-gray-600">
+                        Personal details section - This would contain employee personal information.
+                      </p>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="banking">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-gray-800">Banking Details</h3>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-gray-600">
+                        Banking details section - This would contain employee banking information.
+                      </p>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </motion.div>
+          )}
+
+          {activeTab === "ai-assistant" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="h-[calc(100vh-120px)]"
+            >
+              <AIAssistant employeeId={employeeId} />
+            </motion.div>
+          )}
+
+          {activeTab === "profile" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="apple-card p-6 rounded-2xl"
+            >
+              <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-blue-600" />
+                AI-Enhanced Employee Profile
+              </h2>
+              <EmployeeReport employeeId={employeeId} showFullProfile={true} />
             </motion.div>
           )}
         </main>
