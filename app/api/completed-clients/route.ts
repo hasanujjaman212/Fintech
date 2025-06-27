@@ -32,10 +32,12 @@ export async function GET() {
         date: string
         completion_date: string
         notes: string
+        image_url: string
       }[]
     >`
       SELECT id, original_entry_id, serial_number, name, email, mobile_number, 
-             address, purpose, employee_id, employee_name, date, completion_date, notes
+             address, purpose, employee_id, employee_name, date, completion_date, notes,
+             COALESCE(image_url, '') as image_url
       FROM completed_clients
       ORDER BY completion_date DESC
     `
@@ -62,6 +64,7 @@ export async function POST(request: Request) {
       employeeName,
       date,
       notes,
+      imageUrl,
     } = body
 
     console.log("Adding completed client:", body)
@@ -95,18 +98,19 @@ export async function POST(request: Request) {
         date: string
         completion_date: string
         notes: string
+        image_url: string
       }[]
     >`
       INSERT INTO completed_clients (
         original_entry_id, serial_number, name, email, mobile_number, 
-        address, purpose, employee_id, employee_name, date, completion_date, notes
+        address, purpose, employee_id, employee_name, date, completion_date, notes, image_url
       ) VALUES (
         ${originalEntryId}, ${serialNumber}, ${name}, ${email}, ${mobileNumber},
         ${address}, ${purpose}, ${employeeId}, ${employeeName}, ${date}, 
-        CURRENT_TIMESTAMP, ${notes || ""}
+        CURRENT_TIMESTAMP, ${notes || ""}, ${imageUrl || ""}
       )
       RETURNING id, original_entry_id, serial_number, name, email, mobile_number, 
-               address, purpose, employee_id, employee_name, date, completion_date, notes
+               address, purpose, employee_id, employee_name, date, completion_date, notes, image_url
     `
 
     return NextResponse.json(result[0])
