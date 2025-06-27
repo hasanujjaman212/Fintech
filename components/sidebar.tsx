@@ -2,19 +2,7 @@
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  BarChart3,
-  FileText,
-  Home,
-  MessageSquare,
-  User,
-  X,
-  Users,
-  CheckCircle,
-  Shield,
-  Sparkles,
-  UserCheck,
-} from "lucide-react"
+import { BarChart3, FileText, Home, MessageSquare, User, X, Users, CheckCircle, Shield, Sparkles } from "lucide-react"
 
 interface SidebarProps {
   activeTab: string
@@ -25,7 +13,6 @@ interface SidebarProps {
   isMobile: boolean
   toggleSidebar: () => void
   isAdmin?: boolean
-  isManager?: boolean
 }
 
 const navigationItems = [
@@ -34,42 +21,30 @@ const navigationItems = [
     label: "Dashboard",
     icon: Home,
     adminOnly: false,
-    managerOnly: false,
   },
   {
     id: "performance",
     label: "Performance",
     icon: BarChart3,
     adminOnly: false,
-    managerOnly: false,
-  },
-  {
-    id: "manager-dashboard",
-    label: "Manager Dashboard",
-    icon: UserCheck,
-    adminOnly: false,
-    managerOnly: true,
   },
   {
     id: "account-management",
     label: "Account Management",
     icon: Users,
     adminOnly: true,
-    managerOnly: false,
   },
   {
     id: "completed-clients",
     label: "Completed Clients",
     icon: CheckCircle,
     adminOnly: true,
-    managerOnly: false,
   },
   {
     id: "uptodate",
     label: "Up-to-date",
     icon: FileText,
     adminOnly: false,
-    managerOnly: false,
     requiresAuth: true,
   },
   {
@@ -77,14 +52,12 @@ const navigationItems = [
     label: "AI Assistant",
     icon: MessageSquare,
     adminOnly: false,
-    managerOnly: false,
   },
   {
     id: "profile",
     label: "Profile",
     icon: User,
     adminOnly: false,
-    managerOnly: false,
   },
 ]
 
@@ -97,7 +70,6 @@ export default function Sidebar({
   isMobile,
   toggleSidebar,
   isAdmin = false,
-  isManager = false,
 }: SidebarProps) {
   const handleNavClick = (itemId: string, requiresAuth?: boolean) => {
     if (itemId === "uptodate" && requiresAuth) {
@@ -113,35 +85,8 @@ export default function Sidebar({
 
   const filteredItems = navigationItems.filter((item) => {
     if (item.adminOnly && !isAdmin) return false
-    if (item.managerOnly && !isManager) return false
     return true
   })
-
-  const getUserType = () => {
-    if (isAdmin) return "Admin Portal"
-    if (isManager) return "Manager Portal"
-    return "Employee Portal"
-  }
-
-  const getUserBadge = () => {
-    if (isAdmin) {
-      return (
-        <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-          <Shield className="h-4 w-4 text-red-600" />
-          <span className="text-sm font-medium text-red-800">Administrator</span>
-        </div>
-      )
-    }
-    if (isManager) {
-      return (
-        <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg">
-          <UserCheck className="h-4 w-4 text-purple-600" />
-          <span className="text-sm font-medium text-purple-800">Manager</span>
-        </div>
-      )
-    }
-    return null
-  }
 
   return (
     <>
@@ -165,7 +110,7 @@ export default function Sidebar({
                 <Sparkles className="h-4 w-4 text-white" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-gray-900">{getUserType()}</h2>
+                <h2 className="text-sm font-semibold text-gray-900">{isAdmin ? "Admin Portal" : "Employee Portal"}</h2>
                 <p className="text-xs text-gray-500">IIFL Capital Services</p>
               </div>
             </div>
@@ -176,8 +121,15 @@ export default function Sidebar({
             )}
           </div>
 
-          {/* User Badge */}
-          {(isAdmin || isManager) && <div className="mx-4 mt-4 mb-2">{getUserBadge()}</div>}
+          {/* Admin Badge */}
+          {isAdmin && (
+            <div className="mx-4 mt-4 mb-2">
+              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                <Shield className="h-4 w-4 text-red-600" />
+                <span className="text-sm font-medium text-red-800">Administrator</span>
+              </div>
+            </div>
+          )}
 
           {/* Navigation */}
           <ScrollArea className="flex-1 px-4">
@@ -196,7 +148,6 @@ export default function Sidebar({
                       isActive && "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md",
                       isDisabled && "opacity-50 cursor-not-allowed",
                       item.adminOnly && "border-l-2 border-red-200",
-                      item.managerOnly && "border-l-2 border-purple-200",
                     )}
                     onClick={() => !isDisabled && handleNavClick(item.id, item.requiresAuth)}
                     disabled={isDisabled}
@@ -204,7 +155,6 @@ export default function Sidebar({
                     <Icon className="h-4 w-4" />
                     <span className="text-sm font-medium">{item.label}</span>
                     {item.adminOnly && <Shield className="h-3 w-3 ml-auto text-red-500" />}
-                    {item.managerOnly && <UserCheck className="h-3 w-3 ml-auto text-purple-500" />}
                   </Button>
                 )
               })}

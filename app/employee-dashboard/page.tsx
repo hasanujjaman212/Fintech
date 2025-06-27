@@ -18,7 +18,6 @@ import AIClientInsights from "@/components/ai-client-insights"
 import AIMarketTrends from "@/components/ai-market-trends"
 import AccountManagement from "@/components/account-management"
 import CompletedClients from "@/components/completed-clients"
-import ManagerDashboard from "@/components/manager-dashboard"
 
 export default function EmployeeDashboard() {
   const [employeeName, setEmployeeName] = useState("")
@@ -30,8 +29,6 @@ export default function EmployeeDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [isManager, setIsManager] = useState(false)
-  const [accountType, setAccountType] = useState("")
   const router = useRouter()
 
   useEffect(() => {
@@ -50,7 +47,6 @@ export default function EmployeeDashboard() {
     const storedEmployeeId = localStorage.getItem("employeeId")
     const storedEmployeeName = localStorage.getItem("employeeName")
     const storedCanAccessUptodate = localStorage.getItem("canAccessUptodate") === "true"
-    const storedAccountType = localStorage.getItem("accountType") || ""
 
     if (!storedEmployeeId || !storedEmployeeName) {
       router.push("/employee-login")
@@ -60,13 +56,10 @@ export default function EmployeeDashboard() {
     setEmployeeId(storedEmployeeId)
     setEmployeeName(storedEmployeeName)
     setCanAccessUptodate(storedCanAccessUptodate)
-    setAccountType(storedAccountType)
 
-    // Check user type
-    if (storedEmployeeId === "admin1" || storedAccountType === "admin") {
+    // Check if user is admin
+    if (storedEmployeeId === "admin1") {
       setIsAdmin(true)
-    } else if (storedAccountType === "manager") {
-      setIsManager(true)
     }
 
     return () => {
@@ -80,7 +73,6 @@ export default function EmployeeDashboard() {
     localStorage.removeItem("employeeName")
     localStorage.removeItem("canAccessUptodate")
     localStorage.removeItem("employeeData")
-    localStorage.removeItem("accountType")
     router.push("/")
   }
 
@@ -133,7 +125,6 @@ export default function EmployeeDashboard() {
           isMobile={isMobile}
           toggleSidebar={toggleSidebar}
           isAdmin={isAdmin}
-          isManager={isManager}
         />
 
         <main
@@ -160,16 +151,14 @@ export default function EmployeeDashboard() {
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="h-5 w-5 text-blue-600" />
                   <h1 className="text-2xl font-bold text-gray-900">
-                    {isAdmin ? "Admin Dashboard" : isManager ? "Manager Dashboard" : "AI-Powered Dashboard"}
+                    {isAdmin ? "Admin Dashboard" : "AI-Powered Dashboard"}
                   </h1>
                 </div>
                 <p className="text-gray-600">
                   Welcome, {employeeName}.{" "}
                   {isAdmin
                     ? "Manage the entire system and monitor all activities."
-                    : isManager
-                      ? "Monitor and oversee all pending and in-progress client interactions."
-                      : "Here's your AI-enhanced financial dashboard with insights and analytics."}
+                    : "Here's your AI-enhanced financial dashboard with insights and analytics."}
                 </p>
               </div>
 
@@ -258,17 +247,6 @@ export default function EmployeeDashboard() {
             </motion.div>
           )}
 
-          {activeTab === "manager-dashboard" && isManager && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="apple-card p-6 rounded-2xl"
-            >
-              <ManagerDashboard />
-            </motion.div>
-          )}
-
           {activeTab === "account-management" && isAdmin && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -323,21 +301,13 @@ export default function EmployeeDashboard() {
                 <TabsContent value="personal">
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium text-gray-800">Personal Details</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-600">
-                        Personal details section - This would contain employee personal information.
-                      </p>
-                    </div>
+                    {/* Personal details content would go here */}
                   </div>
                 </TabsContent>
                 <TabsContent value="banking">
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium text-gray-800">Banking Details</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-600">
-                        Banking details section - This would contain employee banking information.
-                      </p>
-                    </div>
+                    {/* Banking details content would go here */}
                   </div>
                 </TabsContent>
               </Tabs>
