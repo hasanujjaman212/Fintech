@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle, Search, Filter, Download, Eye, AlertCircle, ImageIcon } from "lucide-react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { CheckCircle, Search, Filter, Download, Eye, AlertCircle } from "lucide-react"
 
 interface CompletedClient {
   id: number
@@ -25,7 +24,6 @@ interface CompletedClient {
   completion_date?: string
   notes?: string
   status?: string
-  image_url?: string
   // Alternative field names that might come from API
   client_name?: string
   client_email?: string
@@ -39,8 +37,6 @@ export default function CompletedClients() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterEmployee, setFilterEmployee] = useState("all")
   const [employees, setEmployees] = useState<string[]>([])
-  const [selectedClient, setSelectedClient] = useState<CompletedClient | null>(null)
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false)
 
   useEffect(() => {
     fetchCompletedClients()
@@ -113,7 +109,7 @@ export default function CompletedClients() {
       return
     }
 
-    const headers = ["Client Name", "Email", "Mobile", "Address", "Purpose", "Employee", "Completion Date", "Notes"]
+    const headers = ["Client Name", "Email", "Mobile", "Employee", "Completion Date", "Notes"]
     const csvContent = [
       headers.join(","),
       ...filteredClients.map((client) =>
@@ -121,8 +117,6 @@ export default function CompletedClients() {
           client.name || client.client_name || "",
           client.email || client.client_email || "",
           client.mobile_number || client.client_mobile || "",
-          client.address || "",
-          client.purpose || "",
           client.employee_name || client.employee_id || "",
           client.completion_date ? new Date(client.completion_date).toLocaleDateString() : "",
           client.notes || "",
@@ -137,11 +131,6 @@ export default function CompletedClients() {
     a.download = "completed-clients.csv"
     a.click()
     window.URL.revokeObjectURL(url)
-  }
-
-  const handleViewDetails = (client: CompletedClient) => {
-    setSelectedClient(client)
-    setShowDetailsDialog(true)
   }
 
   if (loading) {
@@ -268,11 +257,10 @@ export default function CompletedClients() {
                   <TableHead>Client Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Mobile</TableHead>
-                  <TableHead className="hidden lg:table-cell">Address</TableHead>
-                  <TableHead>Purpose</TableHead>
                   <TableHead>Handled By</TableHead>
                   <TableHead>Completion Date</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Notes</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -286,20 +274,9 @@ export default function CompletedClients() {
 
                     return (
                       <TableRow key={client.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {clientName}
-                            {client.image_url && <ImageIcon className="h-3 w-3 text-blue-500" title="Has attachment" />}
-                          </div>
-                        </TableCell>
+                        <TableCell className="font-medium">{clientName}</TableCell>
                         <TableCell>{clientEmail}</TableCell>
                         <TableCell>{clientMobile}</TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          <div className="max-w-32 truncate" title={client.address || ""}>
-                            {client.address || "N/A"}
-                          </div>
-                        </TableCell>
-                        <TableCell>{client.purpose || "N/A"}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -324,7 +301,12 @@ export default function CompletedClients() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm" onClick={() => handleViewDetails(client)}>
+                          <div className="max-w-32 truncate" title={client.notes || ""}>
+                            {client.notes || "No notes"}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm">
                             <Eye className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -333,7 +315,7 @@ export default function CompletedClients() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                       {searchTerm || filterEmployee !== "all"
                         ? "No completed clients match your filters"
                         : "No completed clients yet"}
@@ -345,89 +327,6 @@ export default function CompletedClients() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Details Dialog */}
-      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Completed Client Details</DialogTitle>
-            <DialogDescription>Complete information for this completed client interaction</DialogDescription>
-          </DialogHeader>
-          {selectedClient && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Client Name</label>
-                  <p className="text-sm text-gray-900">{selectedClient.name || selectedClient.client_name || "N/A"}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Email</label>
-                  <p className="text-sm text-gray-900">
-                    {selectedClient.email || selectedClient.client_email || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Mobile Number</label>
-                  <p className="text-sm text-gray-900">
-                    {selectedClient.mobile_number || selectedClient.client_mobile || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Status</label>
-                  <div className="mt-1">
-                    <Badge className="bg-green-100 text-green-800">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Completed
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Address</label>
-                <p className="text-sm text-gray-900">{selectedClient.address || "N/A"}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Purpose</label>
-                <p className="text-sm text-gray-900">{selectedClient.purpose || "N/A"}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Handled By</label>
-                  <p className="text-sm text-gray-900">
-                    {selectedClient.employee_name || selectedClient.employee_id || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Completion Date</label>
-                  <p className="text-sm text-gray-900">
-                    {selectedClient.completion_date
-                      ? new Date(selectedClient.completion_date).toLocaleDateString()
-                      : "N/A"}
-                  </p>
-                </div>
-              </div>
-              {selectedClient.notes && (
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Notes</label>
-                  <p className="text-sm text-gray-900">{selectedClient.notes}</p>
-                </div>
-              )}
-              {selectedClient.image_url && (
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Attached Image</label>
-                  <div className="mt-2">
-                    <img
-                      src={selectedClient.image_url || "/placeholder.svg"}
-                      alt="Client interaction attachment"
-                      className="max-w-full h-auto rounded-lg border"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
