@@ -224,26 +224,22 @@ export default function EmployeeDashboard() {
                 <Sparkles className="h-5 w-5 text-blue-600" />
                 AI-Enhanced Performance Dashboard
               </h2>
-              {isAdmin ? (
-                <Tabs defaultValue="self" className="w-full">
-                  <TabsList className="mb-4 bg-gray-100 p-1 rounded-lg">
-                    <TabsTrigger value="self" className="rounded-md data-[state=active]:bg-white">
-                      Self
-                    </TabsTrigger>
-                    <TabsTrigger value="total" className="rounded-md data-[state=active]:bg-white">
-                      Total
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="self">
-                    <PerformanceTable employeeId={employeeId} />
-                  </TabsContent>
-                  <TabsContent value="total">
-                    <TotalPerformanceTable />
-                  </TabsContent>
-                </Tabs>
-              ) : (
-                <PerformanceTable employeeId={employeeId} />
-              )}
+              <Tabs defaultValue="self" className="w-full">
+                <TabsList className="mb-4 bg-gray-100 p-1 rounded-lg">
+                  <TabsTrigger value="self" className="rounded-md data-[state=active]:bg-white">
+                    Self
+                  </TabsTrigger>
+                  <TabsTrigger value="total" className="rounded-md data-[state=active]:bg-white">
+                    Total
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="self">
+                  <PerformanceTable employeeId={employeeId} />
+                </TabsContent>
+                <TabsContent value="total">
+                  <TotalPerformanceTable />
+                </TabsContent>
+              </Tabs>
             </motion.div>
           )}
 

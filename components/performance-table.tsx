@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Pencil, Save, X, Plus, Trash2, Sparkles, ImageIcon } from "lucide-react"
+import { Pencil, Save, X, Plus, Trash2, Sparkles } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,6 @@ interface PerformanceEntry {
   date: string
   status: "pending" | "completed" | "in-progress"
   notes?: string
-  image_url?: string
 }
 
 export default function PerformanceTable({ employeeId }: { employeeId: string }) {
@@ -46,7 +45,6 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
     purpose: "",
     status: "pending",
     notes: "",
-    image_url: "",
   })
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
@@ -56,7 +54,6 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
   const [entryToDelete, setEntryToDelete] = useState<PerformanceEntry | null>(null)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     fetchEntries()
@@ -74,51 +71,6 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
       console.error("Failed to load performance data:", error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleImageUpload = async (file: File, isEditing = false) => {
-    if (!file) return
-
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      alert("Please select an image file")
-      return
-    }
-
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Image size should be less than 5MB")
-      return
-    }
-
-    setUploadingImage(true)
-
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to upload image")
-      }
-
-      const data = await response.json()
-
-      if (isEditing && editData) {
-        setEditData({ ...editData, image_url: data.url })
-      } else {
-        setNewEntry({ ...newEntry, image_url: data.url })
-      }
-    } catch (error) {
-      console.error("Error uploading image:", error)
-      alert("Failed to upload image. Please try again.")
-    } finally {
-      setUploadingImage(false)
     }
   }
 
@@ -184,10 +136,6 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
     }
 
     try {
-      const originalEntry = entries.find((e) => e.id === editData.id)
-      const wasCompleted = originalEntry?.status === "completed"
-      const isNowCompleted = editData.status === "completed"
-
       const response = await fetch(`/api/performance/${employeeId}/${editData.id}`, {
         method: "PUT",
         headers: {
@@ -196,30 +144,32 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         body: JSON.stringify({
           name: editData.name.trim(),
           email: editData.email.trim(),
-          mobileNumber: editData.mobile_number.trim(),
+          mobile_number: editData.mobile_number.trim(), // Corrected
           address: editData.address.trim(),
           purpose: editData.purpose.trim(),
-          employeeId: editData.employee_id,
+          employee_id: editData.employee_id, // Corrected
           status: editData.status,
           notes: editData.notes?.trim() || "",
-          imageUrl: editData.image_url || "",
         }),
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to update entry")
+        const contentType = response.headers.get("content-type")
+        let errorMessage = `Failed to update entry. Server responded with status: ${response.status}`
+        if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+        }
+        throw new Error(errorMessage)
       }
 
       const updated = await response.json()
 
       // If status changed to completed, handle the transfer
-      if (!wasCompleted && isNowCompleted) {
-        console.log("Client completed, transferring to admin...")
+      if (editData.status === "completed" && entries.find((e) => e.id === editData.id)?.status !== "completed") {
         await handleCompletedTransfer(updated)
         // Remove from current list
         setEntries(entries.filter((entry) => entry.id !== updated.id))
-        alert("Client marked as completed and transferred to admin's completed list!")
       } else {
         setEntries(entries.map((entry) => (entry.id === updated.id ? updated : entry)))
       }
@@ -227,30 +177,17 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
       setEditingId(null)
       setEditData(null)
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred."
+      alert(`Failed to update entry: ${errorMessage}`)
       console.error("Failed to update entry:", error)
-      alert("Failed to update entry. Please try again.")
     }
   }
 
   async function handleCompletedTransfer(entry: PerformanceEntry) {
     try {
-      // Get employee name from localStorage or use a default
-      const storedEmployeeName = localStorage.getItem("employeeName") || "Unknown Employee"
-
-      console.log("Transferring completed client:", {
-        originalEntryId: entry.id,
-        serialNumber: entry.serial_number,
-        name: entry.name,
-        email: entry.email,
-        mobileNumber: entry.mobile_number,
-        address: entry.address,
-        purpose: entry.purpose,
-        employeeId: entry.employee_id,
-        employeeName: storedEmployeeName,
-        date: entry.date,
-        notes: entry.notes || "",
-        imageUrl: entry.image_url || "",
-      })
+      // Get employee name
+      const employeeData = localStorage.getItem("employeeData")
+      const employeeName = employeeData ? JSON.parse(employeeData).name : "Unknown Employee"
 
       const response = await fetch("/api/completed-clients", {
         method: "POST",
@@ -258,32 +195,25 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          originalEntryId: entry.id,
-          serialNumber: entry.serial_number,
+          original_entry_id: entry.id, // Corrected
+          serial_number: entry.serial_number, // Corrected
           name: entry.name,
           email: entry.email,
-          mobileNumber: entry.mobile_number,
+          mobile_number: entry.mobile_number, // Corrected
           address: entry.address,
           purpose: entry.purpose,
-          employeeId: entry.employee_id,
-          employeeName: storedEmployeeName,
+          employee_id: entry.employee_id, // Corrected
+          employee_name: employeeName, // Corrected
           date: entry.date,
           notes: entry.notes || "",
-          imageUrl: entry.image_url || "",
         }),
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        console.error("Transfer failed:", errorData)
-        throw new Error(errorData.error || "Failed to transfer completed client")
+        throw new Error("Failed to transfer completed client")
       }
-
-      const result = await response.json()
-      console.log("Transfer successful:", result)
     } catch (error) {
       console.error("Failed to transfer completed client:", error)
-      alert("Client was updated but failed to transfer to admin. Please contact support.")
     }
   }
 
@@ -349,35 +279,31 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          serialNumber: newSerialNumber,
+          serial_number: newSerialNumber, // Corrected
           name: newEntry.name?.trim() || "",
           email: newEntry.email?.trim() || "",
-          mobileNumber: newEntry.mobile_number?.trim() || "",
+          mobile_number: newEntry.mobile_number?.trim() || "", // Corrected
           address: newEntry.address?.trim() || "",
           purpose: newEntry.purpose?.trim() || "",
-          employeeId: employeeId,
+          employee_id: employeeId, // Corrected
           date: new Date().toISOString().split("T")[0],
           status: newEntry.status || "pending",
           notes: newEntry.notes?.trim() || "",
-          imageUrl: newEntry.image_url || "",
         }),
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to add entry")
+        const contentType = response.headers.get("content-type")
+        let errorMessage = `Failed to add client. Server responded with status: ${response.status}`
+        if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+        }
+        throw new Error(errorMessage)
       }
 
       const entry = await response.json()
-
-      // If the new entry is marked as completed, transfer it immediately
-      if (entry.status === "completed") {
-        await handleCompletedTransfer(entry)
-        alert("Client added and marked as completed! Transferred to admin's completed list.")
-      } else {
-        setEntries([...entries, entry])
-      }
-
+      setEntries([...entries, entry])
       setNewEntry({
         name: "",
         email: "",
@@ -386,13 +312,13 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         purpose: "",
         status: "pending",
         notes: "",
-        image_url: "",
       })
       setValidationErrors({})
       setIsAddDialogOpen(false)
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred."
+      setValidationErrors({ general: errorMessage })
       console.error("Failed to add entry:", error)
-      setValidationErrors({ general: "Failed to add client. Please try again." })
     } finally {
       setIsSubmitting(false)
     }
@@ -444,7 +370,6 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         Client Name: ${entry.name}
         Email: ${entry.email}
         Mobile: ${entry.mobile_number}
-        Address: ${entry.address}
         Purpose: ${entry.purpose}
         Status: ${entry.status}
         Notes: ${entry.notes || "No notes provided"}
@@ -508,7 +433,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
               <Plus className="h-4 w-4 mr-2" /> Add New Client
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Add New Client Interaction</DialogTitle>
               <DialogDescription>Enter the details of the new client interaction.</DialogDescription>
@@ -631,42 +556,6 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                   placeholder="Additional notes (optional)..."
                 />
               </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="image" className="text-right">
-                  Image
-                </Label>
-                <div className="col-span-3">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="image"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) handleImageUpload(file, false)
-                      }}
-                      className="flex-1"
-                      disabled={uploadingImage}
-                    />
-                    {uploadingImage && (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    )}
-                  </div>
-                  {newEntry.image_url && (
-                    <div className="mt-2">
-                      <img
-                        src={newEntry.image_url || "/placeholder.svg"}
-                        alt="Preview"
-                        className="w-20 h-20 object-cover rounded border"
-                      />
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1">
-                    Optional: Upload an image related to this client interaction
-                  </p>
-                </div>
-              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>
@@ -675,7 +564,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
               <Button
                 type="button"
                 onClick={handleAddEntry}
-                disabled={isSubmitting || uploadingImage}
+                disabled={isSubmitting}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
               >
                 {isSubmitting ? (
@@ -710,12 +599,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
             {entries.length > 0 ? (
               entries.map((entry) => (
                 <TableRow key={entry.id} className="hover:bg-gray-50">
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {entry.serial_number}
-                      {entry.image_url && <ImageIcon className="h-3 w-3 text-blue-500" title="Has attachment" />}
-                    </div>
-                  </TableCell>
+                  <TableCell className="font-medium">{entry.serial_number}</TableCell>
                   <TableCell>
                     {editingId === entry.id ? (
                       <Input
@@ -757,9 +641,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                         className="h-9"
                       />
                     ) : (
-                      <div className="max-w-32 truncate" title={entry.address}>
-                        {entry.address}
-                      </div>
+                      entry.address
                     )}
                   </TableCell>
                   <TableCell>

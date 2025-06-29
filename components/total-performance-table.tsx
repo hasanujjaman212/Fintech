@@ -3,60 +3,129 @@
 import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Sparkles, Search, Eye, Download } from "lucide-react"
+import { Sparkles, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
-interface AllClientEntry {
+interface PerformanceEntry {
   id: string
-  serial_number: number
-  name: string
-  email: string
-  mobile_number: string
-  address: string
+  serialNumber: number
+  employeeName: string
+  employeeId: string
+  clientName: string
   purpose: string
-  employee_id: string
-  employee_name: string
   date: string
   status: "pending" | "completed" | "in-progress"
-  notes?: string
-  image_url?: string
+  efficiency: number
 }
 
+// Mock data for total performance across all employees
+const mockTotalPerformance: PerformanceEntry[] = [
+  {
+    id: "tp1",
+    serialNumber: 1,
+    employeeName: "John Smith",
+    employeeId: "EMP001",
+    clientName: "Acme Corp",
+    purpose: "Investment Planning",
+    date: "2023-05-15",
+    status: "completed",
+    efficiency: 95,
+  },
+  {
+    id: "tp2",
+    serialNumber: 2,
+    employeeName: "Sarah Johnson",
+    employeeId: "EMP002",
+    clientName: "TechStart Inc",
+    purpose: "Loan Application",
+    date: "2023-05-16",
+    status: "in-progress",
+    efficiency: 82,
+  },
+  {
+    id: "tp3",
+    serialNumber: 3,
+    employeeName: "Michael Brown",
+    employeeId: "EMP003",
+    clientName: "Global Traders",
+    purpose: "Portfolio Review",
+    date: "2023-05-17",
+    status: "completed",
+    efficiency: 91,
+  },
+  {
+    id: "tp4",
+    serialNumber: 4,
+    employeeName: "Emily Davis",
+    employeeId: "EMP004",
+    clientName: "Sunshine Bakery",
+    purpose: "Business Loan",
+    date: "2023-05-18",
+    status: "pending",
+    efficiency: 78,
+  },
+  {
+    id: "tp5",
+    serialNumber: 5,
+    employeeName: "John Smith",
+    employeeId: "EMP001",
+    clientName: "Quantum Solutions",
+    purpose: "Retirement Planning",
+    date: "2023-05-19",
+    status: "completed",
+    efficiency: 97,
+  },
+  {
+    id: "tp6",
+    serialNumber: 6,
+    employeeName: "Sarah Johnson",
+    employeeId: "EMP002",
+    clientName: "Green Energy Co",
+    purpose: "Investment Consultation",
+    date: "2023-05-20",
+    status: "in-progress",
+    efficiency: 85,
+  },
+  {
+    id: "tp7",
+    serialNumber: 7,
+    employeeName: "Michael Brown",
+    employeeId: "EMP003",
+    clientName: "City Hospital",
+    purpose: "Financial Planning",
+    date: "2023-05-21",
+    status: "pending",
+    efficiency: 80,
+  },
+]
+
 export default function TotalPerformanceTable() {
-  const [entries, setEntries] = useState<AllClientEntry[]>([])
+  const [entries, setEntries] = useState<PerformanceEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedEntry, setSelectedEntry] = useState<AllClientEntry | null>(null)
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false)
+  const [aiInsights, setAiInsights] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchAllClientEntries()
-  }, [])
-
-  const fetchAllClientEntries = async () => {
-    try {
-      const response = await fetch("/api/performance/all")
-      if (!response.ok) {
-        throw new Error("Failed to fetch all client entries")
-      }
-      const data = await response.json()
-      setEntries(data)
-    } catch (error) {
-      console.error("Failed to load all client data:", error)
-    } finally {
-      setLoading(false)
+    // Simulate loading data from an API
+    const loadData = () => {
+      setTimeout(() => {
+        setEntries(mockTotalPerformance)
+        setLoading(false)
+        // Simulate AI insights
+        setAiInsights(
+          "AI Analysis: Team performance is 88% efficient on average. John Smith shows the highest efficiency at 96%. Loan applications have the longest processing time.",
+        )
+      }, 1000)
     }
-  }
+
+    loadData()
+  }, [])
 
   const filteredEntries = entries.filter(
     (entry) =>
-      entry.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.purpose.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.employee_name.toLowerCase().includes(searchTerm.toLowerCase()),
+      entry.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      entry.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      entry.purpose.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   const getStatusBadge = (status: string) => {
@@ -70,54 +139,11 @@ export default function TotalPerformanceTable() {
     }
   }
 
-  const exportToCSV = () => {
-    if (filteredEntries.length === 0) {
-      alert("No data to export")
-      return
-    }
-
-    const headers = [
-      "S.No",
-      "Client Name",
-      "Email",
-      "Mobile",
-      "Address",
-      "Purpose",
-      "Employee",
-      "Date",
-      "Status",
-      "Notes",
-    ]
-    const csvContent = [
-      headers.join(","),
-      ...filteredEntries.map((entry) =>
-        [
-          entry.serial_number,
-          entry.name,
-          entry.email,
-          entry.mobile_number,
-          entry.address,
-          entry.purpose,
-          entry.employee_name,
-          entry.date,
-          entry.status,
-          entry.notes || "",
-        ].join(","),
-      ),
-    ].join("\n")
-
-    const blob = new Blob([csvContent], { type: "text/csv" })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "all-client-interactions.csv"
-    a.click()
-    window.URL.revokeObjectURL(url)
-  }
-
-  const handleViewDetails = (entry: AllClientEntry) => {
-    setSelectedEntry(entry)
-    setShowDetailsDialog(true)
+  const getEfficiencyColor = (efficiency: number) => {
+    if (efficiency >= 90) return "text-green-600"
+    if (efficiency >= 80) return "text-blue-600"
+    if (efficiency >= 70) return "text-amber-600"
+    return "text-red-600"
   }
 
   if (loading) {
@@ -133,197 +159,69 @@ export default function TotalPerformanceTable() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h3 className="text-lg font-medium text-gray-800 flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-blue-600" />
-          All Client Interactions Across Organization
+          AI-Enhanced Team Performance
         </h3>
-        <div className="flex gap-2">
-          <Button onClick={exportToCSV} variant="outline" disabled={filteredEntries.length === 0}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+        <div className="relative w-full md:w-64">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Clients</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{entries.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Completed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {entries.filter((e) => e.status === "completed").length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">In Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {entries.filter((e) => e.status === "in-progress").length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
-              {entries.filter((e) => e.status === "pending").length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {aiInsights && (
+        <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-700 flex items-start gap-2">
+          <Sparkles className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+          <p>{aiInsights}</p>
+        </div>
+      )}
 
       <div className="rounded-xl border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50">
               <TableHead className="w-[60px]">S.No</TableHead>
-              <TableHead>Client Name</TableHead>
-              <TableHead className="hidden md:table-cell">Email</TableHead>
-              <TableHead className="hidden lg:table-cell">Mobile</TableHead>
-              <TableHead className="hidden xl:table-cell">Address</TableHead>
-              <TableHead>Purpose</TableHead>
               <TableHead>Employee</TableHead>
+              <TableHead>Client</TableHead>
+              <TableHead className="hidden md:table-cell">Purpose</TableHead>
               <TableHead className="hidden lg:table-cell">Date</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-right">Efficiency</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredEntries.length > 0 ? (
               filteredEntries.map((entry) => (
                 <TableRow key={entry.id} className="hover:bg-gray-50">
-                  <TableCell className="font-medium">{entry.serial_number}</TableCell>
+                  <TableCell className="font-medium">{entry.serialNumber}</TableCell>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{entry.name}</p>
-                      <p className="text-xs text-gray-500 md:hidden">{entry.email}</p>
+                      <p className="font-medium">{entry.employeeName}</p>
+                      <p className="text-xs text-gray-500">{entry.employeeId}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{entry.email}</TableCell>
-                  <TableCell className="hidden lg:table-cell">{entry.mobile_number}</TableCell>
-                  <TableCell className="hidden xl:table-cell">
-                    <div className="max-w-32 truncate" title={entry.address}>
-                      {entry.address}
-                    </div>
-                  </TableCell>
-                  <TableCell>{entry.purpose}</TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium text-sm">{entry.employee_name}</p>
-                      <p className="text-xs text-gray-500">{entry.employee_id}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">{new Date(entry.date).toLocaleDateString()}</TableCell>
+                  <TableCell>{entry.clientName}</TableCell>
+                  <TableCell className="hidden md:table-cell">{entry.purpose}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{entry.date}</TableCell>
                   <TableCell>{getStatusBadge(entry.status)}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(entry)}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    <span className={`font-medium ${getEfficiencyColor(entry.efficiency)}`}>{entry.efficiency}%</span>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                  {searchTerm ? "No client interactions found matching your search." : "No client interactions found."}
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                  No performance data found matching your search.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
-
-      {/* Details Dialog */}
-      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Client Interaction Details</DialogTitle>
-            <DialogDescription>Complete information for this client interaction</DialogDescription>
-          </DialogHeader>
-          {selectedEntry && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Client Name</label>
-                  <p className="text-sm text-gray-900">{selectedEntry.name}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Email</label>
-                  <p className="text-sm text-gray-900">{selectedEntry.email}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Mobile Number</label>
-                  <p className="text-sm text-gray-900">{selectedEntry.mobile_number}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Status</label>
-                  <div className="mt-1">{getStatusBadge(selectedEntry.status)}</div>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Address</label>
-                <p className="text-sm text-gray-900">{selectedEntry.address}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Purpose</label>
-                <p className="text-sm text-gray-900">{selectedEntry.purpose}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Handled By</label>
-                  <p className="text-sm text-gray-900">
-                    {selectedEntry.employee_name} ({selectedEntry.employee_id})
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Date</label>
-                  <p className="text-sm text-gray-900">{new Date(selectedEntry.date).toLocaleDateString()}</p>
-                </div>
-              </div>
-              {selectedEntry.notes && (
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Notes</label>
-                  <p className="text-sm text-gray-900">{selectedEntry.notes}</p>
-                </div>
-              )}
-              {selectedEntry.image_url && (
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Attached Image</label>
-                  <div className="mt-2">
-                    <img
-                      src={selectedEntry.image_url || "/placeholder.svg"}
-                      alt="Client interaction attachment"
-                      className="max-w-full h-auto rounded-lg border"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
