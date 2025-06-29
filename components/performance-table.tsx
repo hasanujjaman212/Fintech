@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Pencil, Save, X, Plus, Trash2, Sparkles } from "lucide-react"
+import { Pencil, Save, X, Plus, Trash2, Sparkles, ImageIcon } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ interface PerformanceEntry {
   date: string
   status: "pending" | "completed" | "in-progress"
   notes?: string
+  image_url?: string
 }
 
 export default function PerformanceTable({ employeeId }: { employeeId: string }) {
@@ -45,6 +46,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
     purpose: "",
     status: "pending",
     notes: "",
+    image_url: "",
   })
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
@@ -54,6 +56,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
   const [entryToDelete, setEntryToDelete] = useState<PerformanceEntry | null>(null)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     fetchEntries()
@@ -71,6 +74,51 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
       console.error("Failed to load performance data:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleImageUpload = async (file: File, isEditing = false) => {
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file")
+      return
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size should be less than 5MB")
+      return
+    }
+
+    setUploadingImage(true)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to upload image")
+      }
+
+      const data = await response.json()
+
+      if (isEditing && editData) {
+        setEditData({ ...editData, image_url: data.url })
+      } else {
+        setNewEntry({ ...newEntry, image_url: data.url })
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error)
+      alert("Failed to upload image. Please try again.")
+    } finally {
+      setUploadingImage(false)
     }
   }
 
@@ -154,6 +202,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           employeeId: editData.employee_id,
           status: editData.status,
           notes: editData.notes?.trim() || "",
+          imageUrl: editData.image_url || "",
         }),
       })
 
@@ -200,6 +249,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         employeeName: storedEmployeeName,
         date: entry.date,
         notes: entry.notes || "",
+        imageUrl: entry.image_url || "",
       })
 
       const response = await fetch("/api/completed-clients", {
@@ -219,6 +269,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           employeeName: storedEmployeeName,
           date: entry.date,
           notes: entry.notes || "",
+          imageUrl: entry.image_url || "",
         }),
       })
 
@@ -308,6 +359,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           date: new Date().toISOString().split("T")[0],
           status: newEntry.status || "pending",
           notes: newEntry.notes?.trim() || "",
+          imageUrl: newEntry.image_url || "",
         }),
       })
 
@@ -334,6 +386,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         purpose: "",
         status: "pending",
         notes: "",
+        image_url: "",
       })
       setValidationErrors({})
       setIsAddDialogOpen(false)
@@ -391,6 +444,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         Client Name: ${entry.name}
         Email: ${entry.email}
         Mobile: ${entry.mobile_number}
+        Address: ${entry.address}
         Purpose: ${entry.purpose}
         Status: ${entry.status}
         Notes: ${entry.notes || "No notes provided"}
@@ -454,7 +508,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
               <Plus className="h-4 w-4 mr-2" /> Add New Client
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Client Interaction</DialogTitle>
               <DialogDescription>Enter the details of the new client interaction.</DialogDescription>
@@ -577,6 +631,42 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                   placeholder="Additional notes (optional)..."
                 />
               </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="image" className="text-right">
+                  Image
+                </Label>
+                <div className="col-span-3">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="image"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) handleImageUpload(file, false)
+                      }}
+                      className="flex-1"
+                      disabled={uploadingImage}
+                    />
+                    {uploadingImage && (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    )}
+                  </div>
+                  {newEntry.image_url && (
+                    <div className="mt-2">
+                      <img
+                        src={newEntry.image_url || "/placeholder.svg"}
+                        alt="Preview"
+                        className="w-20 h-20 object-cover rounded border"
+                      />
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Optional: Upload an image related to this client interaction
+                  </p>
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>
@@ -585,7 +675,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
               <Button
                 type="button"
                 onClick={handleAddEntry}
-                disabled={isSubmitting}
+                disabled={isSubmitting || uploadingImage}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
               >
                 {isSubmitting ? (
@@ -620,7 +710,12 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
             {entries.length > 0 ? (
               entries.map((entry) => (
                 <TableRow key={entry.id} className="hover:bg-gray-50">
-                  <TableCell className="font-medium">{entry.serial_number}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {entry.serial_number}
+                      {entry.image_url && <ImageIcon className="h-3 w-3 text-blue-500" title="Has attachment" />}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     {editingId === entry.id ? (
                       <Input
@@ -662,7 +757,9 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                         className="h-9"
                       />
                     ) : (
-                      entry.address
+                      <div className="max-w-32 truncate" title={entry.address}>
+                        {entry.address}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell>
