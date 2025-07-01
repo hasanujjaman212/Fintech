@@ -7,26 +7,40 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle, Search, Filter, Download, Eye } from "lucide-react"
+import { CheckCircle, Search, Filter, Download, Eye, AlertCircle, ImageIcon } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface CompletedClient {
   id: number
-  client_name: string
-  client_email: string
-  client_mobile: string
-  employee_id: string
-  employee_name: string
-  completion_date: string
+  original_entry_id?: number
+  serial_number?: number
+  name?: string
+  email?: string
+  mobile_number?: string
+  address?: string
+  purpose?: string
+  employee_id?: string
+  employee_name?: string
+  date?: string
+  completion_date?: string
   notes?: string
-  status: string
+  status?: string
+  image_url?: string
+  // Alternative field names that might come from API
+  client_name?: string
+  client_email?: string
+  client_mobile?: string
 }
 
 export default function CompletedClients() {
   const [completedClients, setCompletedClients] = useState<CompletedClient[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterEmployee, setFilterEmployee] = useState("all")
   const [employees, setEmployees] = useState<string[]>([])
+  const [selectedClient, setSelectedClient] = useState<CompletedClient | null>(null)
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false)
 
   useEffect(() => {
     fetchCompletedClients()
@@ -34,44 +48,83 @@ export default function CompletedClients() {
 
   const fetchCompletedClients = async () => {
     try {
-      const response = await fetch("/api/completed-clients")
-      if (response.ok) {
-        const data = await response.json()
-        setCompletedClients(data)
+      setLoading(true)
+      setError(null)
 
-        // Extract unique employee names for filter
-        const uniqueEmployees = [...new Set(data.map((client: CompletedClient) => client.employee_name))]
-        setEmployees(uniqueEmployees)
+      const response = await fetch("/api/completed-clients")
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`)
       }
+
+      const data = await response.json()
+
+      // Handle both error responses and successful responses
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      // Ensure data is an array
+      const clientsArray = Array.isArray(data) ? data : []
+      setCompletedClients(clientsArray)
+
+      // Extract unique employee names for filter (with null checks)
+      const uniqueEmployees = [
+        ...new Set(
+          clientsArray
+            .map((client: CompletedClient) => client.employee_name || client.employee_id)
+            .filter((name): name is string => Boolean(name)),
+        ),
+      ]
+      setEmployees(uniqueEmployees)
     } catch (error) {
       console.error("Error fetching completed clients:", error)
+      setError(error instanceof Error ? error.message : "Failed to load completed clients")
+      setCompletedClients([])
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredClients = completedClients.filter((client) => {
-    const matchesSearch =
-      client.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.client_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.employee_name.toLowerCase().includes(searchTerm.toLowerCase())
+  // Safe string comparison helper
+  const safeIncludes = (str: string | undefined | null, searchTerm: string): boolean => {
+    return str ? str.toLowerCase().includes(searchTerm.toLowerCase()) : false
+  }
 
-    const matchesEmployee = filterEmployee === "all" || client.employee_name === filterEmployee
+  const filteredClients = completedClients.filter((client) => {
+    // Get client name from either field
+    const clientName = client.name || client.client_name || ""
+    const clientEmail = client.email || client.client_email || ""
+    const employeeName = client.employee_name || client.employee_id || ""
+
+    const matchesSearch =
+      safeIncludes(clientName, searchTerm) ||
+      safeIncludes(clientEmail, searchTerm) ||
+      safeIncludes(employeeName, searchTerm)
+
+    const matchesEmployee = filterEmployee === "all" || employeeName === filterEmployee
 
     return matchesSearch && matchesEmployee
   })
 
   const exportToCSV = () => {
-    const headers = ["Client Name", "Email", "Mobile", "Employee", "Completion Date", "Notes"]
+    if (filteredClients.length === 0) {
+      alert("No data to export")
+      return
+    }
+
+    const headers = ["Client Name", "Email", "Mobile", "Address", "Purpose", "Employee", "Completion Date", "Notes"]
     const csvContent = [
       headers.join(","),
       ...filteredClients.map((client) =>
         [
-          client.client_name,
-          client.client_email,
-          client.client_mobile,
-          client.employee_name,
-          new Date(client.completion_date).toLocaleDateString(),
+          client.name || client.client_name || "",
+          client.email || client.client_email || "",
+          client.mobile_number || client.client_mobile || "",
+          client.address || "",
+          client.purpose || "",
+          client.employee_name || client.employee_id || "",
+          client.completion_date ? new Date(client.completion_date).toLocaleDateString() : "",
           client.notes || "",
         ].join(","),
       ),
@@ -86,8 +139,33 @@ export default function CompletedClients() {
     window.URL.revokeObjectURL(url)
   }
 
+  const handleViewDetails = (client: CompletedClient) => {
+    setSelectedClient(client)
+    setShowDetailsDialog(true)
+  }
+
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading completed clients...</div>
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-2">Loading completed clients...</span>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <AlertCircle className="h-12 w-12 text-red-500" />
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-red-700">Error Loading Completed Clients</h3>
+          <p className="text-red-600 mt-2">{error}</p>
+          <Button onClick={fetchCompletedClients} className="mt-4" variant="outline">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -100,7 +178,11 @@ export default function CompletedClients() {
           </h2>
           <p className="text-muted-foreground">View all completed client interactions across the organization</p>
         </div>
-        <Button onClick={exportToCSV} className="bg-green-600 hover:bg-green-700">
+        <Button
+          onClick={exportToCSV}
+          className="bg-green-600 hover:bg-green-700"
+          disabled={filteredClients.length === 0}
+        >
           <Download className="h-4 w-4 mr-2" />
           Export CSV
         </Button>
@@ -132,6 +214,7 @@ export default function CompletedClients() {
             <div className="text-2xl font-bold text-purple-600">
               {
                 completedClients.filter((client) => {
+                  if (!client.completion_date) return false
                   const completionDate = new Date(client.completion_date)
                   const now = new Date()
                   return (
@@ -185,55 +268,72 @@ export default function CompletedClients() {
                   <TableHead>Client Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Mobile</TableHead>
+                  <TableHead className="hidden lg:table-cell">Address</TableHead>
+                  <TableHead>Purpose</TableHead>
                   <TableHead>Handled By</TableHead>
                   <TableHead>Completion Date</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Notes</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredClients.length > 0 ? (
-                  filteredClients.map((client) => (
-                    <TableRow key={client.id}>
-                      <TableCell className="font-medium">{client.client_name}</TableCell>
-                      <TableCell>{client.client_email}</TableCell>
-                      <TableCell>{client.client_mobile}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-medium text-blue-600">
-                              {client.employee_name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </span>
+                  filteredClients.map((client) => {
+                    const clientName = client.name || client.client_name || "N/A"
+                    const clientEmail = client.email || client.client_email || "N/A"
+                    const clientMobile = client.mobile_number || client.client_mobile || "N/A"
+                    const employeeName = client.employee_name || client.employee_id || "N/A"
+
+                    return (
+                      <TableRow key={client.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {clientName}
+                            {client.image_url && <ImageIcon className="h-3 w-3 text-blue-500" title="Has attachment" />}
                           </div>
-                          {client.employee_name}
-                        </div>
-                      </TableCell>
-                      <TableCell>{new Date(client.completion_date).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Badge className="bg-green-100 text-green-800">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Completed
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-32 truncate" title={client.notes}>
-                          {client.notes || "No notes"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell>{clientEmail}</TableCell>
+                        <TableCell>{clientMobile}</TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="max-w-32 truncate" title={client.address || ""}>
+                            {client.address || "N/A"}
+                          </div>
+                        </TableCell>
+                        <TableCell>{client.purpose || "N/A"}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium text-blue-600">
+                                {employeeName
+                                  .split(" ")
+                                  .map((n) => n[0] || "")
+                                  .join("")
+                                  .toUpperCase() || "?"}
+                              </span>
+                            </div>
+                            {employeeName}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {client.completion_date ? new Date(client.completion_date).toLocaleDateString() : "N/A"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="bg-green-100 text-green-800">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Completed
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm" onClick={() => handleViewDetails(client)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                       {searchTerm || filterEmployee !== "all"
                         ? "No completed clients match your filters"
                         : "No completed clients yet"}
@@ -245,6 +345,89 @@ export default function CompletedClients() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Completed Client Details</DialogTitle>
+            <DialogDescription>Complete information for this completed client interaction</DialogDescription>
+          </DialogHeader>
+          {selectedClient && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Client Name</label>
+                  <p className="text-sm text-gray-900">{selectedClient.name || selectedClient.client_name || "N/A"}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Email</label>
+                  <p className="text-sm text-gray-900">
+                    {selectedClient.email || selectedClient.client_email || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Mobile Number</label>
+                  <p className="text-sm text-gray-900">
+                    {selectedClient.mobile_number || selectedClient.client_mobile || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Status</label>
+                  <div className="mt-1">
+                    <Badge className="bg-green-100 text-green-800">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Completed
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Address</label>
+                <p className="text-sm text-gray-900">{selectedClient.address || "N/A"}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Purpose</label>
+                <p className="text-sm text-gray-900">{selectedClient.purpose || "N/A"}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Handled By</label>
+                  <p className="text-sm text-gray-900">
+                    {selectedClient.employee_name || selectedClient.employee_id || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Completion Date</label>
+                  <p className="text-sm text-gray-900">
+                    {selectedClient.completion_date
+                      ? new Date(selectedClient.completion_date).toLocaleDateString()
+                      : "N/A"}
+                  </p>
+                </div>
+              </div>
+              {selectedClient.notes && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Notes</label>
+                  <p className="text-sm text-gray-900">{selectedClient.notes}</p>
+                </div>
+              )}
+              {selectedClient.image_url && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Attached Image</label>
+                  <div className="mt-2">
+                    <img
+                      src={selectedClient.image_url || "/placeholder.svg"}
+                      alt="Client interaction attachment"
+                      className="max-w-full h-auto rounded-lg border"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

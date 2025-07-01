@@ -1,77 +1,92 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 
-export async function PUT(request: NextRequest, { params }: { params: { employeeId: string; entryId: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const entryId = Number.parseInt(params.entryId)
-    const employeeId = params.employeeId
-    const entry = await request.json()
+    const data = await request.json()
+    const accountId = Number.parseInt(params.id)
 
-    console.log("Updating entry:", { entryId, employeeId, entry })
-
-    if (isNaN(entryId)) {
-      return NextResponse.json({ error: "Invalid entry ID" }, { status: 400 })
+    if (isNaN(accountId)) {
+      return NextResponse.json({ error: "Invalid account ID" }, { status: 400 })
     }
 
-    const result = await sql<
-      {
-        id: number
-        serial_number: number
-        name: string
-        email: string
-        mobile_number: string
-        address: string
-        purpose: string
-        employee_id: string
-        date: string
-        status: string
-        notes: string
-      }[]
-    >`
-      UPDATE performance_entries 
+    // Validate required fields
+    if (
+      !data.account_id ||
+      !data.username ||
+      !data.password ||
+      !data.name ||
+      !data.email ||
+      !data.mobile_number ||
+      !data.address
+    ) {
+      return NextResponse.json({ error: "All fields are required" }, { status: 400 })
+    }
+
+    // Check for duplicate username (excluding current account)
+    const existingUsername = await sql`
+      SELECT id FROM accounts WHERE username = ${data.username} AND id != ${accountId}
+    `
+
+    if (existingUsername.length > 0) {
+      return NextResponse.json({ error: "Username already exists" }, { status: 400 })
+    }
+
+    // Check for duplicate email (excluding current account)
+    const existingEmail = await sql`
+      SELECT id FROM accounts WHERE email = ${data.email} AND id != ${accountId}
+    `
+
+    if (existingEmail.length > 0) {
+      return NextResponse.json({ error: "Email already exists" }, { status: 400 })
+    }
+
+    const result = await sql`
+      UPDATE accounts 
       SET 
-        name = ${entry.name || ""},
-        email = ${entry.email || ""},
-        mobile_number = ${entry.mobileNumber || ""},
-        address = ${entry.address || ""},
-        purpose = ${entry.purpose || ""},
-        status = ${entry.status || "pending"},
-        notes = ${entry.notes || ""},
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${entryId} AND employee_id = ${employeeId}
-      RETURNING id, serial_number, name, email, mobile_number, address, purpose, employee_id, date, status, notes
+        account_id = ${data.account_id},
+        username = ${data.username}, 
+        password = ${data.password}, 
+        role = ${data.role}, 
+        name = ${data.name}, 
+        email = ${data.email}, 
+        mobile_number = ${data.mobile_number}, 
+        address = ${data.address}
+      WHERE id = ${accountId}
+      RETURNING *
     `
 
     if (result.length === 0) {
-      return NextResponse.json({ error: "Entry not found or access denied" }, { status: 404 })
+      return NextResponse.json({ error: "Account not found" }, { status: 404 })
     }
 
     return NextResponse.json(result[0])
   } catch (error) {
-    console.error("Error updating performance entry:", error)
-    return NextResponse.json(
-      {
-        error: "Failed to update performance entry",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Error updating account:", error)
+    return NextResponse.json({ error: "Failed to update account" }, { status: 500 })
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { employeeId: string; entryId: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const entryId = Number.parseInt(params.entryId)
-    const employeeId = params.employeeId
+    const accountId = Number.parseInt(params.id)
+
+    if (isNaN(accountId)) {
+      return NextResponse.json({ error: "Invalid account ID" }, { status: 400 })
+    }
 
     const result = await sql`
-      DELETE FROM performance_entries 
-      WHERE id = ${entryId} AND employee_id = ${employeeId}
+      DELETE FROM accounts WHERE id = ${accountId}
+      RETURNING *
     `
 
-    return NextResponse.json({ success: true })
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Account not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({ message: "Account deleted successfully" })
   } catch (error) {
-    console.error("Error deleting performance entry:", error)
-    return NextResponse.json({ error: "Failed to delete performance entry" }, { status: 500 })
+    console.error("Error deleting account:", error)
+    return NextResponse.json({ error: "Failed to delete account" }, { status: 500 })
   }
 }
