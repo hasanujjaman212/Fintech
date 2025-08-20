@@ -1,8 +1,10 @@
 "use client"
+
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { BarChart3, FileText, Home, MessageSquare, User, X, Users, CheckCircle, Shield, Sparkles } from "lucide-react"
+import { BarChart3, FileText, Home, MessageSquare, User, X, Users, CheckCircle, Shield, TrendingUp } from "lucide-react"
+import { useEffect, useRef } from "react"
 
 interface SidebarProps {
   activeTab: string
@@ -71,6 +73,37 @@ export default function Sidebar({
   toggleSidebar,
   isAdmin = false,
 }: SidebarProps) {
+  const tradingViewRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // Load TradingView widget
+    if (tradingViewRef.current && isOpen) {
+      // Clear existing content
+      tradingViewRef.current.innerHTML = ""
+
+      const script = document.createElement("script")
+      script.type = "text/javascript"
+      script.src = "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
+      script.async = true
+      script.innerHTML = JSON.stringify({
+        symbol: "NASDAQ:AAPL",
+        width: "100%",
+        height: "220",
+        locale: "en",
+        dateRange: "12M",
+        colorTheme: "light",
+        trendLineColor: "rgba(41, 98, 255, 1)",
+        underLineColor: "rgba(41, 98, 255, 0.3)",
+        underLineBottomColor: "rgba(41, 98, 255, 0)",
+        isTransparent: false,
+        autosize: false,
+        largeChartUrl: "",
+      })
+
+      tradingViewRef.current.appendChild(script)
+    }
+  }, [isOpen])
+
   const handleNavClick = (itemId: string, requiresAuth?: boolean) => {
     if (itemId === "uptodate" && requiresAuth) {
       handleUptodateClick()
@@ -98,16 +131,16 @@ export default function Sidebar({
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed left-0 top-0 z-50 h-full w-64 transform bg-white shadow-xl transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0",
+          "fixed left-0 top-0 z-50 h-full w-64 transform professional-sidebar transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between border-b p-4">
+          <div className="flex items-center justify-between border-b border-gray-200 p-4">
             <div className="flex items-center space-x-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600">
-                <Sparkles className="h-4 w-4 text-white" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
+                <TrendingUp className="h-4 w-4 text-white" />
               </div>
               <div>
                 <h2 className="text-sm font-semibold text-gray-900">{isAdmin ? "Admin Portal" : "Employee Portal"}</h2>
@@ -144,8 +177,9 @@ export default function Sidebar({
                     key={item.id}
                     variant={isActive ? "default" : "ghost"}
                     className={cn(
-                      "w-full justify-start gap-3 h-10",
-                      isActive && "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md",
+                      "w-full justify-start gap-3 h-10 transition-all duration-200",
+                      isActive && "bg-blue-600 text-white shadow-sm hover:bg-blue-700",
+                      !isActive && "hover:bg-gray-100",
                       isDisabled && "opacity-50 cursor-not-allowed",
                       item.adminOnly && "border-l-2 border-red-200",
                     )}
@@ -159,12 +193,20 @@ export default function Sidebar({
                 )
               })}
             </nav>
+
+            {/* Market Widget */}
+            <div className="mt-6 mb-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-3 px-2">Market Overview</h3>
+              <div className="tradingview-widget">
+                <div ref={tradingViewRef} className="w-full h-full"></div>
+              </div>
+            </div>
           </ScrollArea>
 
           {/* Footer */}
-          <div className="border-t p-4">
+          <div className="border-t border-gray-200 p-4">
             <div className="text-xs text-gray-500 text-center">
-              <p>Powered by AI</p>
+              <p>Financial Technology Platform</p>
               <p className="mt-1">Partner of IIFL Capital Services Ltd</p>
             </div>
           </div>

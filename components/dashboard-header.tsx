@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Menu, Search, Settings, UserCircle, Sparkles } from "lucide-react"
+import { Bell, Menu, Search, Settings, UserCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -21,7 +21,7 @@ interface DashboardHeaderProps {
 
 export default function DashboardHeader({ employeeName, onLogout, toggleSidebar, isMobile }: DashboardHeaderProps) {
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+    <header className="professional-header sticky top-0 z-30">
       <div className="px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
         <div className="flex items-center">
           {isMobile && (
@@ -32,11 +32,15 @@ export default function DashboardHeader({ employeeName, onLogout, toggleSidebar,
           )}
           <Link href="/" className="flex items-center">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-blue-600" />
+              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center text-white font-bold shadow-sm">
+                FS
+              </div>
               <span className="text-xl font-bold text-gray-900">FintechSolutions</span>
             </div>
           </Link>
-          <div className="ml-3 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">AI-Powered</div>
+          <div className="ml-3 bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full border border-blue-200">
+            Partner of IIFL
+          </div>
         </div>
 
         <div className="hidden md:flex items-center flex-1 max-w-md mx-4">
@@ -44,15 +48,9 @@ export default function DashboardHeader({ employeeName, onLogout, toggleSidebar,
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Ask AI anything..."
-              className="w-full pl-10 pr-4 py-2 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Search anything..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            <Button
-              size="icon"
-              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 rounded-full bg-blue-600 hover:bg-blue-700"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-white" />
-            </Button>
           </div>
         </div>
 
@@ -78,10 +76,6 @@ export default function DashboardHeader({ employeeName, onLogout, toggleSidebar,
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <Sparkles className="h-4 w-4 mr-2 text-blue-600" />
-                AI Preferences
-              </DropdownMenuItem>
               <DropdownMenuItem>Profile</DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuSeparator />

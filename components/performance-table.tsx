@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Pencil, Save, X, Plus, Trash2, Sparkles } from "lucide-react"
+import { Pencil, Save, X, Plus, Trash2, MessageSquare, ImageIcon } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { TrendingUp } from "lucide-react"
 
 interface PerformanceEntry {
   id: number
@@ -29,6 +30,7 @@ interface PerformanceEntry {
   date: string
   status: "pending" | "completed" | "in-progress"
   notes?: string
+  image_url?: string
 }
 
 export default function PerformanceTable({ employeeId }: { employeeId: string }) {
@@ -46,14 +48,15 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
     status: "pending",
     notes: "",
   })
-  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
-  const [aiLoading, setAiLoading] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<PerformanceEntry | null>(null)
   const [showAiDialog, setShowAiDialog] = useState(false)
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [entryToDelete, setEntryToDelete] = useState<PerformanceEntry | null>(null)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     fetchEntries()
@@ -74,6 +77,51 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
     }
   }
 
+  const handleImageUpload = async (file: File, entryId?: number) => {
+    if (!file) return null
+
+    // Validate file type and size
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    const maxSize = 5 * 1024 * 1024 // 5MB
+
+    if (!allowedTypes.includes(file.type)) {
+      alert("Please upload a valid image file (JPEG, PNG, GIF, or WebP)")
+      return null
+    }
+
+    if (file.size > maxSize) {
+      alert("File size must be less than 5MB")
+      return null
+    }
+
+    setUploadingImage(true)
+    try {
+      // Create FormData for file upload
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("employeeId", employeeId)
+      if (entryId) formData.append("entryId", entryId.toString())
+
+      const response = await fetch("/api/upload-image", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to upload image")
+      }
+
+      const data = await response.json()
+      return data.imageUrl
+    } catch (error) {
+      console.error("Error uploading image:", error)
+      alert("Failed to upload image. Please try again.")
+      return null
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   function handleEdit(entry: PerformanceEntry) {
     setEditingId(entry.id)
     setEditData({ ...entry })
@@ -87,7 +135,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
   async function handleSave() {
     if (!editData) return
 
-    // Validate required fields for editing
+    // Validation logic here...
     const errors: Record<string, string> = {}
 
     if (!editData.name?.trim()) {
@@ -144,12 +192,13 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         body: JSON.stringify({
           name: editData.name.trim(),
           email: editData.email.trim(),
-          mobile_number: editData.mobile_number.trim(), // Corrected
+          mobile_number: editData.mobile_number.trim(),
           address: editData.address.trim(),
           purpose: editData.purpose.trim(),
-          employee_id: editData.employee_id, // Corrected
+          employee_id: editData.employee_id,
           status: editData.status,
           notes: editData.notes?.trim() || "",
+          image_url: editData.image_url || null,
         }),
       })
 
@@ -157,8 +206,8 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         const contentType = response.headers.get("content-type")
         let errorMessage = `Failed to update entry. Server responded with status: ${response.status}`
         if (contentType && contentType.includes("application/json")) {
-            const errorData = await response.json()
-            errorMessage = errorData.error || errorMessage
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
         }
         throw new Error(errorMessage)
       }
@@ -195,17 +244,18 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          original_entry_id: entry.id, // Corrected
-          serial_number: entry.serial_number, // Corrected
+          original_entry_id: entry.id,
+          serial_number: entry.serial_number,
           name: entry.name,
           email: entry.email,
-          mobile_number: entry.mobile_number, // Corrected
+          mobile_number: entry.mobile_number,
           address: entry.address,
           purpose: entry.purpose,
-          employee_id: entry.employee_id, // Corrected
-          employee_name: employeeName, // Corrected
+          employee_id: entry.employee_id,
+          employee_name: employeeName,
           date: entry.date,
           notes: entry.notes || "",
+          image_url: entry.image_url || null,
         }),
       })
 
@@ -279,13 +329,13 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          serial_number: newSerialNumber, // Corrected
+          serial_number: newSerialNumber,
           name: newEntry.name?.trim() || "",
           email: newEntry.email?.trim() || "",
-          mobile_number: newEntry.mobile_number?.trim() || "", // Corrected
+          mobile_number: newEntry.mobile_number?.trim() || "",
           address: newEntry.address?.trim() || "",
           purpose: newEntry.purpose?.trim() || "",
-          employee_id: employeeId, // Corrected
+          employee_id: employeeId,
           date: new Date().toISOString().split("T")[0],
           status: newEntry.status || "pending",
           notes: newEntry.notes?.trim() || "",
@@ -296,8 +346,8 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         const contentType = response.headers.get("content-type")
         let errorMessage = `Failed to add client. Server responded with status: ${response.status}`
         if (contentType && contentType.includes("application/json")) {
-            const errorData = await response.json()
-            errorMessage = errorData.error || errorMessage
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
         }
         throw new Error(errorMessage)
       }
@@ -363,7 +413,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
 
     try {
       const prompt = `
-        You are an AI assistant for a financial services company.
+        You are an assistant for a financial services company.
         
         Analyze the following client interaction and provide personalized recommendations for the employee handling this case:
         
@@ -388,13 +438,13 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
       })
 
       if (!response.ok) {
-        throw new Error("Failed to generate AI suggestion")
+        throw new Error("Failed to generate suggestion")
       }
 
       const data = await response.json()
       setAiSuggestion(data.text)
     } catch (error) {
-      console.error("Error generating AI suggestion:", error)
+      console.error("Error generating suggestion:", error)
       setAiSuggestion("Sorry, I couldn't generate recommendations at this time. Please try again later.")
     } finally {
       setAiLoading(false)
@@ -424,16 +474,16 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-800 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-blue-600" />
-          AI-Enhanced Client Interactions
+          <TrendingUp className="h-4 w-4 text-blue-600" />
+          Client Interactions
         </h3>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+            <Button className="gradient-bg text-white hover:opacity-90 skeumorphic-button">
               <Plus className="h-4 w-4 mr-2" /> Add New Client
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg glass-card">
             <DialogHeader>
               <DialogTitle>Add New Client Interaction</DialogTitle>
               <DialogDescription>Enter the details of the new client interaction.</DialogDescription>
@@ -455,7 +505,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                     value={newEntry.name || ""}
                     onChange={(e) => handleNewEntryChange("name", e.target.value)}
                     placeholder="Client full name"
-                    className={validationErrors.name ? "border-red-500" : ""}
+                    className={`skeumorphic-input ${validationErrors.name ? "border-red-500" : ""}`}
                   />
                   {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>}
                 </div>
@@ -472,7 +522,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                     value={newEntry.email || ""}
                     onChange={(e) => handleNewEntryChange("email", e.target.value)}
                     placeholder="client@example.com"
-                    className={validationErrors.email ? "border-red-500" : ""}
+                    className={`skeumorphic-input ${validationErrors.email ? "border-red-500" : ""}`}
                   />
                   {validationErrors.email && <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>}
                 </div>
@@ -488,7 +538,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                     value={newEntry.mobile_number || ""}
                     onChange={(e) => handleNewEntryChange("mobile_number", e.target.value)}
                     placeholder="+1-555-0123"
-                    className={validationErrors.mobile_number ? "border-red-500" : ""}
+                    className={`skeumorphic-input ${validationErrors.mobile_number ? "border-red-500" : ""}`}
                   />
                   {validationErrors.mobile_number && (
                     <p className="text-red-500 text-xs mt-1">{validationErrors.mobile_number}</p>
@@ -506,7 +556,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                     value={newEntry.address || ""}
                     onChange={(e) => handleNewEntryChange("address", e.target.value)}
                     placeholder="Client address"
-                    className={validationErrors.address ? "border-red-500" : ""}
+                    className={`skeumorphic-input ${validationErrors.address ? "border-red-500" : ""}`}
                   />
                   {validationErrors.address && <p className="text-red-500 text-xs mt-1">{validationErrors.address}</p>}
                 </div>
@@ -522,7 +572,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                     value={newEntry.purpose || ""}
                     onChange={(e) => handleNewEntryChange("purpose", e.target.value)}
                     placeholder="Loan application, Investment consultation, etc."
-                    className={validationErrors.purpose ? "border-red-500" : ""}
+                    className={`skeumorphic-input ${validationErrors.purpose ? "border-red-500" : ""}`}
                   />
                   {validationErrors.purpose && <p className="text-red-500 text-xs mt-1">{validationErrors.purpose}</p>}
                 </div>
@@ -536,7 +586,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                   id="status"
                   value={newEntry.status || "pending"}
                   onChange={(e) => handleNewEntryChange("status", e.target.value as any)}
-                  className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="col-span-3 skeumorphic-input"
                 >
                   <option value="pending">Pending</option>
                   <option value="in-progress">In Progress</option>
@@ -552,20 +602,26 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                   id="notes"
                   value={newEntry.notes || ""}
                   onChange={(e) => handleNewEntryChange("notes", e.target.value)}
-                  className="col-span-3"
+                  className="col-span-3 skeumorphic-input"
                   placeholder="Additional notes (optional)..."
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddDialogOpen(false)}
+                disabled={isSubmitting}
+                className="skeumorphic-button"
+              >
                 Cancel
               </Button>
               <Button
                 type="button"
                 onClick={handleAddEntry}
                 disabled={isSubmitting}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                className="gradient-bg text-white hover:opacity-90"
               >
                 {isSubmitting ? (
                   <div className="flex items-center gap-2">
@@ -581,10 +637,10 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         </Dialog>
       </div>
 
-      <div className="rounded-xl border overflow-hidden backdrop-blur-sm bg-white/90">
+      <div className="rounded-xl border overflow-hidden liquid-glass">
         <Table>
           <TableHeader>
-            <TableRow className="bg-gray-50">
+            <TableRow className="bg-white/20">
               <TableHead className="w-[60px]">S.No</TableHead>
               <TableHead>Name</TableHead>
               <TableHead className="hidden md:table-cell">Email</TableHead>
@@ -598,17 +654,25 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           <TableBody>
             {entries.length > 0 ? (
               entries.map((entry) => (
-                <TableRow key={entry.id} className="hover:bg-gray-50">
+                <TableRow key={entry.id} className="hover:bg-white/10">
                   <TableCell className="font-medium">{entry.serial_number}</TableCell>
                   <TableCell>
                     {editingId === entry.id ? (
                       <Input
                         value={editData?.name || ""}
                         onChange={(e) => handleChange("name", e.target.value)}
-                        className="h-9"
+                        className="h-9 skeumorphic-input"
                       />
                     ) : (
-                      entry.name
+                      <div>
+                        <p className="font-medium">{entry.name}</p>
+                        {entry.image_url && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <ImageIcon className="h-3 w-3 text-blue-600" />
+                            <span className="text-xs text-blue-600">Has attachment</span>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
@@ -616,7 +680,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                       <Input
                         value={editData?.email || ""}
                         onChange={(e) => handleChange("email", e.target.value)}
-                        className="h-9"
+                        className="h-9 skeumorphic-input"
                       />
                     ) : (
                       entry.email
@@ -627,7 +691,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                       <Input
                         value={editData?.mobile_number || ""}
                         onChange={(e) => handleChange("mobile_number", e.target.value)}
-                        className="h-9"
+                        className="h-9 skeumorphic-input"
                       />
                     ) : (
                       entry.mobile_number
@@ -638,10 +702,12 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                       <Input
                         value={editData?.address || ""}
                         onChange={(e) => handleChange("address", e.target.value)}
-                        className="h-9"
+                        className="h-9 skeumorphic-input"
                       />
                     ) : (
-                      entry.address
+                      <div className="max-w-32 truncate" title={entry.address}>
+                        {entry.address}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell>
@@ -649,7 +715,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                       <Input
                         value={editData?.purpose || ""}
                         onChange={(e) => handleChange("purpose", e.target.value)}
-                        className="h-9"
+                        className="h-9 skeumorphic-input"
                       />
                     ) : (
                       entry.purpose
@@ -660,7 +726,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                       <select
                         value={editData?.status || "pending"}
                         onChange={(e) => handleChange("status", e.target.value as any)}
-                        className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        className="h-9 w-full rounded-md skeumorphic-input"
                       >
                         <option value="pending">Pending</option>
                         <option value="in-progress">In Progress</option>
@@ -673,10 +739,20 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                   <TableCell className="text-right">
                     {editingId === entry.id ? (
                       <div className="flex justify-end space-x-1">
-                        <Button size="icon" variant="outline" onClick={handleSave} className="h-8 w-8">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={handleSave}
+                          className="h-8 w-8 skeumorphic-button bg-transparent"
+                        >
                           <Save className="h-4 w-4" />
                         </Button>
-                        <Button size="icon" variant="outline" onClick={handleCancel} className="h-8 w-8">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={handleCancel}
+                          className="h-8 w-8 skeumorphic-button bg-transparent"
+                        >
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
@@ -686,19 +762,24 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
                           size="icon"
                           variant="outline"
                           onClick={() => getAiSuggestion(entry)}
-                          className="h-8 w-8 text-blue-600 hover:text-blue-700"
-                          title="Get AI recommendations"
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 skeumorphic-button"
+                          title="Get recommendations"
                         >
-                          <Sparkles className="h-4 w-4" />
+                          <MessageSquare className="h-4 w-4" />
                         </Button>
-                        <Button size="icon" variant="outline" onClick={() => handleEdit(entry)} className="h-8 w-8">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => handleEdit(entry)}
+                          className="h-8 w-8 skeumorphic-button"
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           size="icon"
                           variant="outline"
                           onClick={() => handleDeleteClick(entry)}
-                          className="h-8 w-8 text-red-500 hover:text-red-600"
+                          className="h-8 w-8 text-red-500 hover:text-red-600 skeumorphic-button"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -718,12 +799,13 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
         </Table>
       </div>
 
+      {/* Chat Assistant Dialog */}
       <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md glass-card">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-blue-600" />
-              AI Recommendations
+              <MessageSquare className="h-4 w-4 text-blue-600" />
+              Chat Assistant Recommendations
             </DialogTitle>
             <DialogDescription>
               {selectedEntry && `Smart suggestions for client: ${selectedEntry.name}`}
@@ -734,11 +816,11 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
               <div className="flex items-center justify-center py-8">
                 <div className="flex flex-col items-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                  <p className="text-sm text-gray-600">Generating AI recommendations...</p>
+                  <p className="text-sm text-gray-600">Generating recommendations...</p>
                 </div>
               </div>
             ) : aiSuggestion ? (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg">
+              <div className="morphism-card p-4 rounded-lg">
                 <div className="text-sm text-blue-700 whitespace-pre-wrap">{aiSuggestion}</div>
               </div>
             ) : (
@@ -746,18 +828,16 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
             )}
           </div>
           <DialogFooter>
-            <Button
-              onClick={() => setShowAiDialog(false)}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-            >
+            <Button onClick={() => setShowAiDialog(false)} className="gradient-bg text-white hover:opacity-90">
               Close
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md glass-card">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <Trash2 className="h-5 w-5" />
@@ -769,7 +849,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
           </DialogHeader>
           {entryToDelete && (
             <div className="py-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="morphism-card p-4 rounded-lg">
                 <div className="space-y-2">
                   <p className="text-sm">
                     <span className="font-medium text-gray-700">Client:</span> {entryToDelete.name}
@@ -788,7 +868,7 @@ export default function PerformanceTable({ employeeId }: { employeeId: string })
             </div>
           )}
           <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={handleCancelDelete}>
+            <Button variant="outline" onClick={handleCancelDelete} className="skeumorphic-button bg-transparent">
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">

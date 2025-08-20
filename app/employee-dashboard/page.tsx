@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { FileText, User, CreditCard, PieChart, MessageSquare, Sparkles } from "lucide-react"
-import { motion } from "framer-motion"
+import { FileText, User, CreditCard, PieChart, MessageSquare, TrendingUp, BarChart3 } from "lucide-react"
 import DashboardHeader from "@/components/dashboard-header"
 import Sidebar from "@/components/sidebar"
 import PerformanceTable from "@/components/performance-table"
@@ -73,7 +72,7 @@ export default function EmployeeDashboard() {
     localStorage.removeItem("employeeName")
     localStorage.removeItem("canAccessUptodate")
     localStorage.removeItem("employeeData")
-    router.push("/")
+    router.push("/employee-login")
   }
 
   function handleUptodateClick() {
@@ -141,24 +140,19 @@ export default function EmployeeDashboard() {
           )}
 
           {activeTab === "dashboard" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="space-y-6"
-            >
-              <div className="apple-card p-6 rounded-2xl">
+            <div className="space-y-6">
+              <div className="professional-card p-6">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="h-5 w-5 text-blue-600" />
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
                   <h1 className="text-2xl font-bold text-gray-900">
-                    {isAdmin ? "Admin Dashboard" : "AI-Powered Dashboard"}
+                    {isAdmin ? "Admin Dashboard" : "Financial Dashboard"}
                   </h1>
                 </div>
                 <p className="text-gray-600">
                   Welcome, {employeeName}.{" "}
                   {isAdmin
                     ? "Manage the entire system and monitor all activities."
-                    : "Here's your AI-enhanced financial dashboard with insights and analytics."}
+                    : "Here's your financial dashboard with insights and analytics."}
                 </p>
               </div>
 
@@ -170,38 +164,38 @@ export default function EmployeeDashboard() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="apple-card p-6 rounded-2xl">
+                <div className="professional-card p-6">
                   <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-blue-600" />
-                    AI-Generated Recommendations
+                    <TrendingUp className="h-5 w-5 text-blue-600" />
+                    Smart Recommendations
                   </h2>
                   <div className="space-y-4">
-                    <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-xl">
+                    <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg border">
                       <div className="bg-blue-100 p-2 rounded-lg">
                         <FileText className="h-5 w-5 text-blue-600" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-800">Review client portfolio allocations</p>
-                        <p className="text-xs text-gray-500">AI detected potential optimization opportunities</p>
+                        <p className="text-xs text-gray-500">System detected potential optimization opportunities</p>
                       </div>
                     </div>
-                    <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-xl">
+                    <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg border">
                       <div className="bg-green-100 p-2 rounded-lg">
                         <PieChart className="h-5 w-5 text-green-600" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-800">Interest rate change impact analysis</p>
-                        <p className="text-xs text-gray-500">AI predicts significant impact on current loans</p>
+                        <p className="text-xs text-gray-500">System predicts significant impact on current loans</p>
                       </div>
                     </div>
-                    <div className="flex items-start space-x-3 p-3 bg-purple-50 rounded-xl">
+                    <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg border">
                       <div className="bg-purple-100 p-2 rounded-lg">
                         <MessageSquare className="h-5 w-5 text-purple-600" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-800">Client communication opportunity</p>
                         <p className="text-xs text-gray-500">
-                          AI suggests reaching out to clients affected by market changes
+                          System suggests reaching out to clients affected by market changes
                         </p>
                       </div>
                     </div>
@@ -210,83 +204,82 @@ export default function EmployeeDashboard() {
 
                 <AIDocumentAnalyzer />
               </div>
-            </motion.div>
+            </div>
           )}
 
           {activeTab === "performance" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="apple-card p-6 rounded-2xl"
-            >
+            <div className="professional-card p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-blue-600" />
-                AI-Enhanced Performance Dashboard
+                <BarChart3 className="h-5 w-5 text-blue-600" />
+                Performance Dashboard
               </h2>
               <Tabs defaultValue="self" className="w-full">
                 <TabsList className="mb-4 bg-gray-100 p-1 rounded-lg">
-                  <TabsTrigger value="self" className="rounded-md data-[state=active]:bg-white">
-                    Self
+                  <TabsTrigger
+                    value="self"
+                    className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  >
+                    My Performance
                   </TabsTrigger>
-                  <TabsTrigger value="total" className="rounded-md data-[state=active]:bg-white">
-                    Total
-                  </TabsTrigger>
+                  {isAdmin && (
+                    <TabsTrigger
+                      value="total"
+                      className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                    >
+                      Team Performance
+                    </TabsTrigger>
+                  )}
                 </TabsList>
                 <TabsContent value="self">
                   <PerformanceTable employeeId={employeeId} />
                 </TabsContent>
-                <TabsContent value="total">
-                  <TotalPerformanceTable />
-                </TabsContent>
+                {isAdmin && (
+                  <TabsContent value="total">
+                    <TotalPerformanceTable />
+                  </TabsContent>
+                )}
               </Tabs>
-            </motion.div>
+            </div>
           )}
 
           {activeTab === "account-management" && isAdmin && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="apple-card p-6 rounded-2xl"
-            >
+            <div className="professional-card p-6">
               <AccountManagement />
-            </motion.div>
+            </div>
           )}
 
           {activeTab === "completed-clients" && isAdmin && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="apple-card p-6 rounded-2xl"
-            >
+            <div className="professional-card p-6">
               <CompletedClients />
-            </motion.div>
+            </div>
           )}
 
           {activeTab === "uptodate" && authenticated && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="apple-card p-6 rounded-2xl"
-            >
+            <div className="professional-card p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-blue-600" />
-                AI-Analyzed Company Data
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+                Company Data Analysis
               </h2>
               <Tabs defaultValue="report">
                 <TabsList className="mb-4 bg-gray-100 p-1 rounded-lg">
-                  <TabsTrigger value="report" className="rounded-md data-[state=active]:bg-white">
+                  <TabsTrigger
+                    value="report"
+                    className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  >
                     <FileText className="h-4 w-4 mr-2" />
                     Report
                   </TabsTrigger>
-                  <TabsTrigger value="personal" className="rounded-md data-[state=active]:bg-white">
+                  <TabsTrigger
+                    value="personal"
+                    className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  >
                     <User className="h-4 w-4 mr-2" />
                     Personal Details
                   </TabsTrigger>
-                  <TabsTrigger value="banking" className="rounded-md data-[state=active]:bg-white">
+                  <TabsTrigger
+                    value="banking"
+                    className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  >
                     <CreditCard className="h-4 w-4 mr-2" />
                     Banking Details
                   </TabsTrigger>
@@ -297,43 +290,37 @@ export default function EmployeeDashboard() {
                 <TabsContent value="personal">
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium text-gray-800">Personal Details</h3>
-                    {/* Personal details content would go here */}
+                    <div className="bg-gray-50 p-4 rounded-lg border">
+                      <p className="text-gray-600">Personal information and profile details will be displayed here.</p>
+                    </div>
                   </div>
                 </TabsContent>
                 <TabsContent value="banking">
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium text-gray-800">Banking Details</h3>
-                    {/* Banking details content would go here */}
+                    <div className="bg-gray-50 p-4 rounded-lg border">
+                      <p className="text-gray-600">Banking and financial information will be displayed here.</p>
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
-            </motion.div>
+            </div>
           )}
 
           {activeTab === "ai-assistant" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="h-[calc(100vh-120px)]"
-            >
+            <div className="h-[calc(100vh-120px)]">
               <AIAssistant employeeId={employeeId} />
-            </motion.div>
+            </div>
           )}
 
           {activeTab === "profile" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="apple-card p-6 rounded-2xl"
-            >
+            <div className="professional-card p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-blue-600" />
-                AI-Enhanced Employee Profile
+                <User className="h-5 w-5 text-blue-600" />
+                Employee Profile
               </h2>
               <EmployeeReport employeeId={employeeId} showFullProfile={true} />
-            </motion.div>
+            </div>
           )}
         </main>
       </div>

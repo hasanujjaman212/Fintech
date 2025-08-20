@@ -11,14 +11,18 @@ import { CheckCircle, Search, Filter, Download, Eye } from "lucide-react"
 
 interface CompletedClient {
   id: number
-  client_name: string
-  client_email: string
-  client_mobile: string
+  original_entry_id: number
+  serial_number: number
+  name: string
+  email: string
+  mobile_number: string
+  address: string
+  purpose: string
   employee_id: string
   employee_name: string
+  date: string
   completion_date: string
   notes?: string
-  status: string
 }
 
 export default function CompletedClients() {
@@ -37,41 +41,60 @@ export default function CompletedClients() {
       const response = await fetch("/api/completed-clients")
       if (response.ok) {
         const data = await response.json()
-        setCompletedClients(data)
+        setCompletedClients(data || [])
 
-        // Extract unique employee names for filter
-        const uniqueEmployees = [...new Set(data.map((client: CompletedClient) => client.employee_name))]
+        // Extract unique employee names for filter - with null checks
+        const uniqueEmployees = [
+          ...new Set(
+            (data || [])
+              .map((client: CompletedClient) => client.employee_name)
+              .filter((name: string) => name && name.trim() !== ""),
+          ),
+        ]
         setEmployees(uniqueEmployees)
       }
     } catch (error) {
       console.error("Error fetching completed clients:", error)
+      setCompletedClients([])
+      setEmployees([])
     } finally {
       setLoading(false)
     }
   }
 
   const filteredClients = completedClients.filter((client) => {
-    const matchesSearch =
-      client.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.client_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.employee_name.toLowerCase().includes(searchTerm.toLowerCase())
+    if (!client) return false
 
-    const matchesEmployee = filterEmployee === "all" || client.employee_name === filterEmployee
+    const clientName = client.name || ""
+    const clientEmail = client.email || ""
+    const employeeName = client.employee_name || ""
+
+    const matchesSearch =
+      clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      clientEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employeeName.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesEmployee = filterEmployee === "all" || employeeName === filterEmployee
 
     return matchesSearch && matchesEmployee
   })
 
   const exportToCSV = () => {
+    if (filteredClients.length === 0) {
+      alert("No data to export")
+      return
+    }
+
     const headers = ["Client Name", "Email", "Mobile", "Employee", "Completion Date", "Notes"]
     const csvContent = [
       headers.join(","),
       ...filteredClients.map((client) =>
         [
-          client.client_name,
-          client.client_email,
-          client.client_mobile,
-          client.employee_name,
-          new Date(client.completion_date).toLocaleDateString(),
+          client.name || "",
+          client.email || "",
+          client.mobile_number || "",
+          client.employee_name || "",
+          client.completion_date ? new Date(client.completion_date).toLocaleDateString() : "",
           client.notes || "",
         ].join(","),
       ),
@@ -87,7 +110,11 @@ export default function CompletedClients() {
   }
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading completed clients...</div>
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    )
   }
 
   return (
@@ -108,7 +135,7 @@ export default function CompletedClients() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card className="professional-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Completed</CardTitle>
           </CardHeader>
@@ -116,7 +143,7 @@ export default function CompletedClients() {
             <div className="text-2xl font-bold text-green-600">{completedClients.length}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="professional-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Active Employees</CardTitle>
           </CardHeader>
@@ -124,7 +151,7 @@ export default function CompletedClients() {
             <div className="text-2xl font-bold text-blue-600">{employees.length}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="professional-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">This Month</CardTitle>
           </CardHeader>
@@ -132,6 +159,7 @@ export default function CompletedClients() {
             <div className="text-2xl font-bold text-purple-600">
               {
                 completedClients.filter((client) => {
+                  if (!client.completion_date) return false
                   const completionDate = new Date(client.completion_date)
                   const now = new Date()
                   return (
@@ -172,7 +200,7 @@ export default function CompletedClients() {
       </div>
 
       {/* Completed Clients Table */}
-      <Card>
+      <Card className="professional-card">
         <CardHeader>
           <CardTitle>Completed Client Interactions ({filteredClients.length})</CardTitle>
           <CardDescription>All completed client interactions from across the organization</CardDescription>
@@ -196,23 +224,25 @@ export default function CompletedClients() {
                 {filteredClients.length > 0 ? (
                   filteredClients.map((client) => (
                     <TableRow key={client.id}>
-                      <TableCell className="font-medium">{client.client_name}</TableCell>
-                      <TableCell>{client.client_email}</TableCell>
-                      <TableCell>{client.client_mobile}</TableCell>
+                      <TableCell className="font-medium">{client.name || "N/A"}</TableCell>
+                      <TableCell>{client.email || "N/A"}</TableCell>
+                      <TableCell>{client.mobile_number || "N/A"}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                             <span className="text-xs font-medium text-blue-600">
-                              {client.employee_name
+                              {(client.employee_name || "")
                                 .split(" ")
                                 .map((n) => n[0])
                                 .join("")}
                             </span>
                           </div>
-                          {client.employee_name}
+                          {client.employee_name || "Unknown"}
                         </div>
                       </TableCell>
-                      <TableCell>{new Date(client.completion_date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        {client.completion_date ? new Date(client.completion_date).toLocaleDateString() : "N/A"}
+                      </TableCell>
                       <TableCell>
                         <Badge className="bg-green-100 text-green-800">
                           <CheckCircle className="h-3 w-3 mr-1" />
@@ -220,7 +250,7 @@ export default function CompletedClients() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="max-w-32 truncate" title={client.notes}>
+                        <div className="max-w-32 truncate" title={client.notes || ""}>
                           {client.notes || "No notes"}
                         </div>
                       </TableCell>
