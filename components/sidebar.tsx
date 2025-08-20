@@ -86,7 +86,7 @@ export default function Sidebar({
       script.src = "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
       script.async = true
       script.innerHTML = JSON.stringify({
-        symbol: "NASDAQ:AAPL",
+        symbol: "NSE-NIFTY",
         width: "100%",
         height: "220",
         locale: "en",
